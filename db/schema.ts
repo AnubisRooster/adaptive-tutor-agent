@@ -1,0 +1,129 @@
+import { sqliteTable, text, integer, real, uniqueIndex, index } from "drizzle-orm/sqlite-core";
+
+// A learner profile. No real authentication — an optional PIN simply prevents
+// accidental cross-use on a trusted local network.
+export const students = sqliteTable("students", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  color: text("color").notNull().default("#6366f1"),
+  pinHash: text("pin_hash"),
+  pacePref: text("pace_pref").notNull().default("normal"),
+  tonePref: text("tone_pref").notNull().default("encouraging"),
+  createdAt: integer("created_at").notNull(),
+  lastActiveAt: integer("last_active_at").notNull(),
+});
+
+export const subjects = sqliteTable("subjects", {
+  id: text("id").primaryKey(), // slug, e.g. "philosophy"
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  framing: text("framing").notNull().default(""),
+  orderIndex: integer("order_index").notNull().default(0),
+});
+
+export const topics = sqliteTable(
+  "topics",
+  {
+    id: text("id").primaryKey(), // slug, e.g. "philosophy.epistemology"
+    subjectId: text("subject_id").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    // JSON array of topic ids that should be learned first.
+    prerequisites: text("prerequisites").notNull().default("[]"),
+    orderIndex: integer("order_index").notNull().default(0),
+  },
+  (t) => ({
+    bySubject: index("topics_by_subject").on(t.subjectId),
+  })
+);
+
+// Per-student, per-topic mastery state. mastery in [0,1]; bloomLevel 1..6.
+export const mastery = sqliteTable(
+  "mastery",
+  {
+    id: text("id").primaryKey(),
+    studentId: text("student_id").notNull(),
+    topicId: text("topic_id").notNull(),
+    mastery: real("mastery").notNull().default(0),
+    bloomLevel: integer("bloom_level").notNull().default(1),
+    attempts: integer("attempts").notNull().default(0),
+    correct: integer("correct").notNull().default(0),
+    lastSeen: integer("last_seen").notNull().default(0),
+  },
+  (t) => ({
+    uniq: uniqueIndex("mastery_student_topic").on(t.studentId, t.topicId),
+    byStudent: index("mastery_by_student").on(t.studentId),
+  })
+);
+
+export const sessions = sqliteTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(),
+    studentId: text("student_id").notNull(),
+    subjectId: text("subject_id").notNull(),
+    startedAt: integer("started_at").notNull(),
+    lastActiveAt: integer("last_active_at").notNull(),
+  },
+  (t) => ({
+    byStudentSubject: index("sessions_by_student_subject").on(t.studentId, t.subjectId),
+  })
+);
+
+export const messages = sqliteTable(
+  "messages",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    studentId: text("student_id").notNull(),
+    role: text("role").notNull(), // "user" | "assistant" | "system"
+    content: text("content").notNull(),
+    topicId: text("topic_id"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => ({
+    bySession: index("messages_by_session").on(t.sessionId),
+  })
+);
+
+export const gaps = sqliteTable(
+  "gaps",
+  {
+    id: text("id").primaryKey(),
+    studentId: text("student_id").notNull(),
+    topicId: text("topic_id").notNull(),
+    misconception: text("misconception").notNull(),
+    status: text("status").notNull().default("open"), // "open" | "cleared"
+    detectedAt: integer("detected_at").notNull(),
+    clearedAt: integer("cleared_at"),
+  },
+  (t) => ({
+    byStudent: index("gaps_by_student").on(t.studentId),
+  })
+);
+
+export const knowledgeChunks = sqliteTable(
+  "knowledge_chunks",
+  {
+    id: text("id").primaryKey(),
+    subjectId: text("subject_id").notNull(),
+    topicId: text("topic_id"),
+    source: text("source").notNull().default(""),
+    text: text("text").notNull(),
+    // JSON-encoded number[] embedding (null until embedded).
+    embedding: text("embedding"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => ({
+    bySubject: index("chunks_by_subject").on(t.subjectId),
+  })
+);
+
+export type Student = typeof students.$inferSelect;
+export type Subject = typeof subjects.$inferSelect;
+export type Topic = typeof topics.$inferSelect;
+export type Mastery = typeof mastery.$inferSelect;
+export type Session = typeof sessions.$inferSelect;
+export type Message = typeof messages.$inferSelect;
+export type Gap = typeof gaps.$inferSelect;
+export type KnowledgeChunk = typeof knowledgeChunks.$inferSelect;

@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-950 text-slate-100 antialiased;
+}
+
+/* Lightweight markdown rendering */
+.prose-tutor p {
+  @apply my-2 leading-relaxed;
+}
+.prose-tutor ul {
+  @apply my-2 list-disc pl-6 space-y-1;
+}
+.prose-tutor ol {
+  @apply my-2 list-decimal pl-6 space-y-1;
+}
+.prose-tutor code.inline {
+  @apply rounded bg-slate-800 px-1.5 py-0.5 text-[0.85em] font-mono text-amber-200;
+}
+.prose-tutor pre {
+  @apply my-3 overflow-x-auto rounded-lg bg-slate-900 border border-slate-800 p-3 text-sm font-mono;
+}
+.prose-tutor h1,
+.prose-tutor h2,
+.prose-tutor h3 {
+  @apply mt-3 mb-1 font-semibold;
+}
+
+/* Thin scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
