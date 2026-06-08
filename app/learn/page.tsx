@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import HealthBadge from "@/components/HealthBadge";
 import MarkdownLite from "@/components/MarkdownLite";
+import { AddSubjectModal, AddMaterialModal } from "@/components/ContentModals";
 
 const BLOOM = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"];
 
@@ -48,6 +49,8 @@ export default function LearnPage() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+  const [showAddSubject, setShowAddSubject] = useState(false);
+  const [showAddMaterial, setShowAddMaterial] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const subject = useMemo(() => data?.subjects.find((s) => s.id === subjectId), [data, subjectId]);
@@ -99,6 +102,18 @@ export default function LearnPage() {
     const s = data?.subjects.find((x) => x.id === sid);
     setTopicId(s?.recommendedTopicId ?? s?.topics[0]?.id ?? "");
     await loadMessages(sid);
+  }
+
+  async function handleSubjectCreated(newSubjectId: string) {
+    setShowAddSubject(false);
+    const d = await loadState();
+    const s = d?.subjects.find((x) => x.id === newSubjectId);
+    if (s) {
+      setSubjectId(s.id);
+      setTopicId(s.recommendedTopicId ?? s.topics[0]?.id ?? "");
+      setPendingQuestion(null);
+      setMessages([]);
+    }
   }
 
   function historyForApi() {
@@ -241,7 +256,16 @@ export default function LearnPage() {
       <div className="flex min-h-0 flex-1">
         {/* Sidebar */}
         <aside className="hidden w-80 shrink-0 overflow-y-auto border-r border-slate-800 p-4 md:block">
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Subjects</h2>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Subjects</h2>
+            <button
+              onClick={() => setShowAddSubject(true)}
+              className="text-xs text-indigo-400 hover:text-indigo-300"
+              title="Create a new subject"
+            >
+              + Add
+            </button>
+          </div>
           <div className="mb-4 flex flex-wrap gap-2">
             {data.subjects.map((s) => (
               <button
@@ -258,9 +282,18 @@ export default function LearnPage() {
 
           {subject && (
             <>
-              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                {subject.name} — Topics
-              </h2>
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  {subject.name} — Topics
+                </h2>
+                <button
+                  onClick={() => setShowAddMaterial(true)}
+                  className="text-xs text-indigo-400 hover:text-indigo-300"
+                  title="Upload a PDF to ground this subject"
+                >
+                  + Material
+                </button>
+              </div>
               <div className="space-y-1.5">
                 {subject.topics.map((t) => (
                   <button
@@ -376,6 +409,18 @@ export default function LearnPage() {
           </div>
         </main>
       </div>
+
+      {showAddSubject && (
+        <AddSubjectModal onClose={() => setShowAddSubject(false)} onCreated={handleSubjectCreated} />
+      )}
+      {showAddMaterial && subject && (
+        <AddMaterialModal
+          subjectId={subject.id}
+          subjectName={subject.name}
+          topics={subject.topics.map((t) => ({ id: t.id, name: t.name }))}
+          onClose={() => setShowAddMaterial(false)}
+        />
+      )}
     </div>
   );
 }

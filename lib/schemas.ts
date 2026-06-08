@@ -21,6 +21,32 @@ export const GradeSchema = z.object({
 });
 export type Grade = z.infer<typeof GradeSchema>;
 
+// An LLM-proposed curriculum for a brand-new subject. Prerequisites are given
+// as indexes into the topics array (more reliable for small models than ids),
+// and resolved to topic ids when the subject is saved.
+export const CurriculumDraftSchema = z.object({
+  subject: z.object({
+    name: z.string().describe("The subject's display name"),
+    description: z.string().describe("One-sentence description of the subject"),
+    framing: z
+      .string()
+      .describe("Guidance on how a tutor should teach this subject (tone, approach, emphasis)"),
+  }),
+  topics: z
+    .array(
+      z.object({
+        name: z.string().describe("Topic name"),
+        description: z.string().describe("One-sentence description of the topic"),
+        prerequisiteIndexes: z
+          .array(z.number().int())
+          .describe("Indexes (0-based) of earlier topics in this array that should be learned first"),
+      })
+    )
+    .min(1)
+    .describe("Topics ordered from foundational to advanced"),
+});
+export type CurriculumDraft = z.infer<typeof CurriculumDraftSchema>;
+
 // A single quiz question generated for the current topic + Bloom level.
 export const QuizQuestionSchema = z.object({
   question: z.string().describe("The question text"),

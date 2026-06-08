@@ -109,6 +109,8 @@ export const knowledgeChunks = sqliteTable(
     subjectId: text("subject_id").notNull(),
     topicId: text("topic_id"),
     source: text("source").notNull().default(""),
+    // Optional link to the sources row this chunk was ingested from.
+    sourceId: text("source_id"),
     text: text("text").notNull(),
     // JSON-encoded number[] embedding (null until embedded).
     embedding: text("embedding"),
@@ -116,6 +118,28 @@ export const knowledgeChunks = sqliteTable(
   },
   (t) => ({
     bySubject: index("chunks_by_subject").on(t.subjectId),
+  })
+);
+
+// One row per ingested document (uploaded PDF, pasted text, etc.). Drives the
+// ingestion status UI and lets the embedding work run in the background.
+export const sources = sqliteTable(
+  "sources",
+  {
+    id: text("id").primaryKey(),
+    subjectId: text("subject_id").notNull(),
+    topicId: text("topic_id"),
+    kind: text("kind").notNull().default("pdf"), // "pdf" | "text"
+    name: text("name").notNull(),
+    status: text("status").notNull().default("pending"), // pending | embedding | done | error
+    chunkCount: integer("chunk_count").notNull().default(0),
+    embeddedCount: integer("embedded_count").notNull().default(0),
+    error: text("error"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => ({
+    bySubject: index("sources_by_subject").on(t.subjectId),
   })
 );
 
@@ -127,3 +151,4 @@ export type Session = typeof sessions.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type Gap = typeof gaps.$inferSelect;
 export type KnowledgeChunk = typeof knowledgeChunks.$inferSelect;
+export type Source = typeof sources.$inferSelect;

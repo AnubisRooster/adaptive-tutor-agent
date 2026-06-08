@@ -4,31 +4,13 @@ import crypto from "node:crypto";
 import Database from "better-sqlite3";
 import { loadEnv, databasePath } from "../lib/config";
 import { embed } from "../lib/ollama";
+import { chunkText } from "../lib/chunk";
 import { SUBJECTS, TOPICS } from "../db/curriculum";
 
 loadEnv();
 
 const uuid = () => crypto.randomUUID();
 const now = () => Date.now();
-
-function chunkText(text: string, target = 700, overlap = 120): string[] {
-  const paragraphs = text
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-  const chunks: string[] = [];
-  let buf = "";
-  for (const p of paragraphs) {
-    if ((buf + "\n\n" + p).length > target && buf.length > 0) {
-      chunks.push(buf.trim());
-      buf = buf.slice(Math.max(0, buf.length - overlap)) + "\n\n" + p;
-    } else {
-      buf = buf ? buf + "\n\n" + p : p;
-    }
-  }
-  if (buf.trim()) chunks.push(buf.trim());
-  return chunks;
-}
 
 async function main() {
   const file = databasePath();

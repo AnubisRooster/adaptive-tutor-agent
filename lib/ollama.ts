@@ -74,6 +74,27 @@ export async function* streamChat(
   }
 }
 
+/**
+ * Stream a structured (format-constrained) completion as text chunks. Same as
+ * chatOnce but yields the JSON as it is generated, so callers can surface
+ * progress instead of blocking on one long request.
+ */
+export async function* streamStructured(
+  messages: OllamaMessage[],
+  opts: { temperature?: number; format?: object } = {}
+): AsyncGenerator<string> {
+  const stream = await ollama.chat({
+    model: tutorModel(),
+    messages,
+    stream: true,
+    format: opts.format,
+    options: { temperature: opts.temperature ?? 0.3 },
+  });
+  for await (const part of stream) {
+    if (part.message?.content) yield part.message.content;
+  }
+}
+
 /** One-shot chat completion (non-streaming). */
 export async function chatOnce(
   messages: OllamaMessage[],

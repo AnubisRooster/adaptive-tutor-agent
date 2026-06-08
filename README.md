@@ -72,6 +72,17 @@ npm start
 - The PIN is a lightweight guard against accidental cross-use on a **trusted** network — it is **not** strong authentication. Don't expose this server to the public internet.
 - Each browser stores only a profile id cookie; all learning state lives on the host.
 
+## Adding subjects & textbooks
+
+Subjects, topics, and the knowledge base are all stored in the database, so you can grow the curriculum at runtime from the learning UI - no code changes or restarts.
+
+- **Add a subject:** in the sidebar, click **+ Add** next to "Subjects", enter a name (e.g. `Chemistry` - independent of the built-in `Organic Chemistry`), and optionally paste a chapter list/syllabus. The local model drafts a topic path with prerequisites that you can edit (rename, add/remove topics, set prerequisites) before saving. The new subject is shared with all profiles.
+- **Ground tutoring in a textbook:** with a subject selected, click **+ Material** above the topic list and upload a PDF (optionally attached to a specific topic). The file is extracted, chunked, and embedded locally; progress shows per source. Once ingested, the tutor's RAG retrieval uses it on the next turn.
+
+PDFs are parsed with [`unpdf`](https://www.npmjs.com/package/unpdf) (pure JS, no native build, works on macOS and Windows). All ingested material stays on the host in SQLite - nothing is uploaded anywhere.
+
+> Embedding a full textbook is many sequential calls to the embedding model, so ingestion runs in the background and the UI polls for status. Retrieval scores chunk similarity in memory, which is fine for a handful of textbooks per subject; for very large libraries you'd add a vector index.
+
 ## Configuration (`.env`)
 
 | Variable        | Default                  | Purpose                                  |
@@ -86,12 +97,17 @@ npm start
 
 ```
 app/            Next.js routes + UI (profile landing, /learn tutor, /api/*)
-components/     Client UI (MarkdownLite, HealthBadge)
-lib/            ollama client, prompts, adaptive engine, RAG, orchestrator, data access
+components/     Client UI (MarkdownLite, HealthBadge, ContentModals)
+lib/            ollama client, prompts, adaptive engine, RAG, orchestrator, data access,
+                chunk (shared splitter), pdf (text extraction), ingest, curriculum-gen
 db/             Drizzle schema, connection, curriculum seed data
 scripts/        migrate.ts (create tables), seed.ts (curriculum + embeddings)
 content/        Markdown knowledge base, grouped by subject
 ```
+
+New API routes: `POST /api/curriculum/draft` (LLM topic draft), `POST /api/subjects`
+(create subject + topics), `POST /api/ingest` (upload PDF), `GET /api/sources`
+(ingestion status).
 
 ## Notes on concurrency
 

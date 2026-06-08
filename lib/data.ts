@@ -10,6 +10,7 @@ import {
   messages,
   gaps,
   knowledgeChunks,
+  sources,
   type Student,
   type Subject,
   type Topic,
@@ -17,6 +18,7 @@ import {
   type Gap,
   type KnowledgeChunk,
   type Message,
+  type Source,
 } from "@/db/schema";
 
 const now = () => Date.now();
@@ -103,6 +105,74 @@ export function topicPrerequisites(topic: Topic): string[] {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+}
+
+/** Turn a free-text subject name into a stable, url-safe slug id. */
+export function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50);
+}
+
+/** A slug not already taken by a subject, suffixing -2, -3, ... if needed. */
+export function uniqueSubjectId(name: string): string {
+  const base = slugify(name) || "subject";
+  let candidate = base;
+  let n = 2;
+  while (getSubject(candidate)) {
+    candidate = `${base}-${n++}`;
+  }
+  return candidate;
+}
+
+export function createSubject(input: {
+  id: string;
+  name: string;
+  description?: string;
+  framing?: string;
+  orderIndex?: number;
+}): Subject {
+  const nextOrder =
+    input.orderIndex ??
+    ((db.select().from(subjects).all().reduce((max, s) => Math.max(max, s.orderIndex), -1)) + 1);
+  const row = {
+    id: input.id,
+    name: input.name.trim().slice(0, 80),
+    description: (input.description ?? "").slice(0, 400),
+    framing: (input.framing ?? "").slice(0, 800),
+    orderIndex: nextOrder,
+  };
+  db.insert(subjects).values(row).run();
+  return row as Subject;
+}
+
+/** Bulk-insert topics for a subject. Prerequisites are stored as a JSON array. */
+export function createTopics(
+  rows: {
+    id: string;
+    subjectId: string;
+    name: string;
+    description?: string;
+    prerequisites?: string[];
+    orderIndex: number;
+  }[]
+): void {
+  if (rows.length === 0) return;
+  for (const r of rows) {
+    db.insert(topics)
+      .values({
+        id: r.id,
+        subjectId: r.subjectId,
+        name: r.name.trim().slice(0, 120),
+        description: (r.description ?? "").slice(0, 400),
+        prerequisites: JSON.stringify(r.prerequisites ?? []),
+        orderIndex: r.orderIndex,
+      })
+      .run();
   }
 }
 
@@ -242,4 +312,72 @@ export function clearGapsForTopic(studentId: string, topicId: string): void {
 
 export function getChunksForSubject(subjectId: string): KnowledgeChunk[] {
   return db.select().from(knowledgeChunks).where(eq(knowledgeChunks.subjectId, subjectId)).all();
+}
+
+export function insertKnowledgeChunk(input: {
+  subjectId: string;
+  topicId?: string | null;
+  source?: string;
+  sourceId?: string | null;
+  text: string;
+  embedding?: number[] | null;
+}): void {
+  db.insert(knowledgeChunks)
+    .values({
+      id: uuid(),
+      subjectId: input.subjectId,
+      topicId: input.topicId ?? null,
+      source: input.source ?? "",
+      sourceId: input.sourceId ?? null,
+      text: input.text,
+      embedding: input.embedding ? JSON.stringify(input.embedding) : null,
+      createdAt: now(),
+    })
+    .run();
+}
+
+// ---------- Sources (ingested documents) ----------
+
+export function createSource(input: {
+  subjectId: string;
+  topicId?: string | null;
+  kind?: string;
+  name: string;
+}): Source {
+  const ts = now();
+  const row = {
+    id: uuid(),
+    subjectId: input.subjectId,
+    topicId: input.topicId ?? null,
+    kind: input.kind ?? "pdf",
+    name: input.name.slice(0, 200),
+    status: "pending",
+    chunkCount: 0,
+    embeddedCount: 0,
+    error: null,
+    createdAt: ts,
+    updatedAt: ts,
+  };
+  db.insert(sources).values(row).run();
+  return row as Source;
+}
+
+export function updateSource(
+  id: string,
+  patch: Partial<Pick<Source, "status" | "chunkCount" | "embeddedCount" | "error">>
+): void {
+  db.update(sources)
+    .set({ ...patch, updatedAt: now() })
+    .where(eq(sources.id, id))
+    .run();
+}
+
+export function getSource(id: string): Source | undefined {
+  return db.select().from(sources).where(eq(sources.id, id)).get();
+}
+
+export function listSources(subjectId?: string): Source[] {
+  const q = db.select().from(sources);
+  const rows = subjectId ? q.where(eq(sources.subjectId, subjectId)).all() : q.all();
+  return rows.sort((a, b) => b.createdAt - a.createdAt);
 }

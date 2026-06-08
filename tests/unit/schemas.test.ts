@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { GradeSchema, QuizQuestionSchema } from "@/lib/schemas";
+import { GradeSchema, QuizQuestionSchema, CurriculumDraftSchema } from "@/lib/schemas";
 
 describe("GradeSchema", () => {
   it("accepts a well-formed grade", () => {
@@ -59,6 +59,34 @@ describe("QuizQuestionSchema", () => {
       question: "Q",
       bloomLevel: 9,
       idealAnswerOutline: "...",
+    });
+    expect(parsed.success).toBe(false);
+  });
+});
+
+describe("CurriculumDraftSchema", () => {
+  it("accepts a valid draft with prerequisite indexes", () => {
+    const parsed = CurriculumDraftSchema.safeParse({
+      subject: { name: "Chemistry", description: "The study of matter.", framing: "Build intuition first." },
+      topics: [
+        { name: "Atoms", description: "Structure of atoms.", prerequisiteIndexes: [] },
+        { name: "Bonding", description: "How atoms bond.", prerequisiteIndexes: [0] },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects a draft with no topics", () => {
+    const parsed = CurriculumDraftSchema.safeParse({
+      subject: { name: "X", description: "d", framing: "f" },
+      topics: [],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects a draft missing the subject", () => {
+    const parsed = CurriculumDraftSchema.safeParse({
+      topics: [{ name: "A", description: "d", prerequisiteIndexes: [] }],
     });
     expect(parsed.success).toBe(false);
   });

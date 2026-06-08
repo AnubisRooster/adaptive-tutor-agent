@@ -81,13 +81,46 @@ CREATE TABLE IF NOT EXISTS knowledge_chunks (
   subject_id TEXT NOT NULL,
   topic_id TEXT,
   source TEXT NOT NULL DEFAULT '',
+  source_id TEXT,
   text TEXT NOT NULL,
   embedding TEXT,
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS chunks_by_subject ON knowledge_chunks(subject_id);
+
+-- Tracks each ingested document (e.g. an uploaded PDF) so the UI can show
+-- progress/status and chunks can be managed per source.
+CREATE TABLE IF NOT EXISTS sources (
+  id TEXT PRIMARY KEY,
+  subject_id TEXT NOT NULL,
+  topic_id TEXT,
+  kind TEXT NOT NULL DEFAULT 'pdf',
+  name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  chunk_count INTEGER NOT NULL DEFAULT 0,
+  embedded_count INTEGER NOT NULL DEFAULT 0,
+  error TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sources_by_subject ON sources(subject_id);
 `;
+
+/** Add a column if it is missing, so existing databases pick up additive changes. */
+function ensureColumn(
+  db: DatabaseType.Database,
+  table: string,
+  column: string,
+  type: string
+): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
+}
 
 export function applySchema(db: DatabaseType.Database): void {
   db.exec(SCHEMA_SQL);
+  // Backfill columns introduced after the initial schema for pre-existing DBs.
+  ensureColumn(db, "knowledge_chunks", "source_id", "TEXT");
 }
