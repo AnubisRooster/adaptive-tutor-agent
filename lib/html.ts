@@ -60,14 +60,36 @@ export async function fetchUrlText(url: string): Promise<{ title: string; text: 
     throw new Error("Only http(s) URLs are supported.");
   }
 
+  // Use realistic browser headers — many sites (e.g. behind Cloudflare) reject
+  // bot-style user agents with a 403.
   const res = await fetch(parsed.toString(), {
     headers: {
-      "User-Agent": "AdaptiveTutor/1.0 (+local knowledge ingestion)",
-      Accept: "text/html,application/xhtml+xml",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Cache-Control": "no-cache",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "none",
+      "Upgrade-Insecure-Requests": "1",
     },
     redirect: "follow",
   });
   if (!res.ok) {
+    if (res.status === 403 || res.status === 401) {
+      throw new Error(
+        `That site blocked the request (HTTP ${res.status}). It likely requires a login or blocks automated access — try copying the text and using "Paste text" instead.`,
+      );
+    }
+    if (res.status === 429) {
+      throw new Error("That site is rate-limiting requests (HTTP 429). Try again later or paste the text instead.");
+    }
+    if (res.status === 404) {
+      throw new Error("Page not found (HTTP 404). Double-check the URL.");
+    }
     throw new Error(`Failed to fetch URL (HTTP ${res.status}).`);
   }
   const contentType = res.headers.get("content-type") ?? "";
