@@ -7,6 +7,7 @@ const student: Student = {
   name: "Maya",
   color: "#10b981",
   pinHash: null,
+  isAdmin: false,
   pacePref: "normal",
   tonePref: "encouraging",
   createdAt: 0,

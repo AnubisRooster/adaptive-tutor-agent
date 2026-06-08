@@ -29,7 +29,7 @@ type Subject = {
 };
 type Gap = { id: string; topicId: string; topicName: string; misconception: string };
 type StateData = {
-  student: { id: string; name: string; color: string };
+  student: { id: string; name: string; color: string; isAdmin?: boolean };
   subjects: Subject[];
   gaps: Gap[];
 };
@@ -278,6 +278,14 @@ export default function LearnPage() {
             </span>
             {data.student.name}
           </span>
+          {data.student.isAdmin && (
+            <button
+              onClick={() => router.push("/admin")}
+              className="rounded-lg border border-amber-600/60 bg-amber-500/10 px-3 py-1 text-xs text-amber-200 hover:bg-amber-500/20"
+            >
+              Admin
+            </button>
+          )}
           <button onClick={switchProfile} className="rounded-lg border border-slate-700 px-3 py-1 text-xs hover:bg-slate-800">
             Switch
           </button>

@@ -7,6 +7,8 @@ export const students = sqliteTable("students", {
   name: text("name").notNull(),
   color: text("color").notNull().default("#6366f1"),
   pinHash: text("pin_hash"),
+  // Admin profiles (e.g. the owner) can access the /admin portal.
+  isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   pacePref: text("pace_pref").notNull().default("normal"),
   tonePref: text("tone_pref").notNull().default("encouraging"),
   createdAt: integer("created_at").notNull(),

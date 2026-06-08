@@ -95,6 +95,24 @@ npm start
 - The PIN is a lightweight guard against accidental cross-use on a **trusted** network — it is **not** strong authentication. Don't expose this server to the public internet.
 - Each browser stores only a profile id cookie; all learning state lives on the host.
 
+## Admin portal
+
+A designated **admin profile** (e.g. yours) can open `/admin` to oversee everything:
+
+- **Profiles:** every learner with stats (subjects touched, topics mastered, average mastery, attempts, open gaps, last active) and a drill-down into per-topic mastery and gaps.
+- **Curriculum:** rename/edit subjects (description, teaching framing, order), edit topics (name, description, order, prerequisites), and delete topics or whole subjects.
+- **Knowledge:** inspect ingested sources and knowledge chunks per subject/topic, delete bad content, and re-embed a source whose chunks are missing embeddings.
+
+**Granting admin:** create your profile in the app (give it a PIN so the portal isn't open to anyone), then run:
+
+```bash
+npm run admin:grant -- "Mike"     # use your profile's exact name
+npm run admin:grant -- --list     # show current admins
+npm run admin:grant -- --revoke "Mike"
+```
+
+Once granted, an **Admin** button appears in the learning header. Access is gated by being signed in as that admin profile (its PIN is the lock), and every `/api/admin/*` route rejects non-admins.
+
 ## Adding subjects & textbooks
 
 Subjects, topics, and the knowledge base are all stored in the database, so you can grow the curriculum at runtime from the learning UI - no code changes or restarts.

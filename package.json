@@ -11,6 +11,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/seed.ts",
     "setup": "npm run db:migrate && npm run seed",
+    "admin:grant": "tsx scripts/grant-admin.ts",
     "bootstrap": "node scripts/setup.mjs",
     "launch": "node scripts/launch.mjs",
     "app:install": "node scripts/install-macos-app.mjs",

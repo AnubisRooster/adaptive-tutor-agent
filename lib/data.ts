@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   students,
@@ -53,6 +53,7 @@ export function createStudent(input: {
     name: input.name.trim().slice(0, 60),
     color: input.color || "#6366f1",
     pinHash,
+    isAdmin: false,
     pacePref: "normal",
     tonePref: "encouraging",
     createdAt: ts,
@@ -60,6 +61,11 @@ export function createStudent(input: {
   };
   db.insert(students).values(row).run();
   return row as Student;
+}
+
+/** Grant or revoke admin access for a profile. */
+export function setAdmin(studentId: string, isAdmin: boolean): void {
+  db.update(students).set({ isAdmin }).where(eq(students.id, studentId)).run();
 }
 
 export function verifyPin(student: Student, pin?: string): boolean {
@@ -380,4 +386,101 @@ export function listSources(subjectId?: string): Source[] {
   const q = db.select().from(sources);
   const rows = subjectId ? q.where(eq(sources.subjectId, subjectId)).all() : q.all();
   return rows.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function getChunk(id: string): KnowledgeChunk | undefined {
+  return db.select().from(knowledgeChunks).where(eq(knowledgeChunks.id, id)).get();
+}
+
+export function listChunks(subjectId: string, topicId?: string | null): KnowledgeChunk[] {
+  const where =
+    topicId === undefined
+      ? eq(knowledgeChunks.subjectId, subjectId)
+      : topicId === null
+        ? and(eq(knowledgeChunks.subjectId, subjectId), isNull(knowledgeChunks.topicId))
+        : and(eq(knowledgeChunks.subjectId, subjectId), eq(knowledgeChunks.topicId, topicId));
+  return db.select().from(knowledgeChunks).where(where).orderBy(desc(knowledgeChunks.createdAt)).all();
+}
+
+export function getChunksForSource(sourceId: string): KnowledgeChunk[] {
+  return db.select().from(knowledgeChunks).where(eq(knowledgeChunks.sourceId, sourceId)).all();
+}
+
+export function setChunkEmbedding(id: string, embedding: number[] | null): void {
+  db.update(knowledgeChunks)
+    .set({ embedding: embedding ? JSON.stringify(embedding) : null })
+    .where(eq(knowledgeChunks.id, id))
+    .run();
+}
+
+export function deleteChunk(id: string): void {
+  db.delete(knowledgeChunks).where(eq(knowledgeChunks.id, id)).run();
+}
+
+export function deleteSource(id: string): void {
+  db.delete(knowledgeChunks).where(eq(knowledgeChunks.sourceId, id)).run();
+  db.delete(sources).where(eq(sources.id, id)).run();
+}
+
+// ---------- Admin curriculum mutations ----------
+
+export function updateSubject(
+  id: string,
+  patch: Partial<Pick<Subject, "name" | "description" | "framing" | "orderIndex">>
+): void {
+  const set: Record<string, unknown> = {};
+  if (patch.name !== undefined) set.name = patch.name.trim().slice(0, 80);
+  if (patch.description !== undefined) set.description = patch.description.slice(0, 400);
+  if (patch.framing !== undefined) set.framing = patch.framing.slice(0, 800);
+  if (patch.orderIndex !== undefined) set.orderIndex = patch.orderIndex;
+  if (Object.keys(set).length === 0) return;
+  db.update(subjects).set(set).where(eq(subjects.id, id)).run();
+}
+
+export function updateTopic(
+  id: string,
+  patch: Partial<Pick<Topic, "name" | "description" | "orderIndex">> & { prerequisites?: string[] }
+): void {
+  const set: Record<string, unknown> = {};
+  if (patch.name !== undefined) set.name = patch.name.trim().slice(0, 120);
+  if (patch.description !== undefined) set.description = patch.description.slice(0, 400);
+  if (patch.orderIndex !== undefined) set.orderIndex = patch.orderIndex;
+  if (patch.prerequisites !== undefined) set.prerequisites = JSON.stringify(patch.prerequisites);
+  if (Object.keys(set).length === 0) return;
+  db.update(topics).set(set).where(eq(topics.id, id)).run();
+}
+
+/** Delete a topic and any data that references it (chunks, mastery, gaps, prereq links). */
+export function deleteTopic(id: string): void {
+  const topic = getTopic(id);
+  if (!topic) return;
+  db.delete(knowledgeChunks).where(eq(knowledgeChunks.topicId, id)).run();
+  db.delete(mastery).where(eq(mastery.topicId, id)).run();
+  db.delete(gaps).where(eq(gaps.topicId, id)).run();
+  db.update(sources).set({ topicId: null }).where(eq(sources.topicId, id)).run();
+  // Remove this topic from sibling prerequisites.
+  for (const sibling of listTopics(topic.subjectId)) {
+    const prereqs = topicPrerequisites(sibling);
+    if (prereqs.includes(id)) {
+      db.update(topics)
+        .set({ prerequisites: JSON.stringify(prereqs.filter((p) => p !== id)) })
+        .where(eq(topics.id, sibling.id))
+        .run();
+    }
+  }
+  db.delete(topics).where(eq(topics.id, id)).run();
+}
+
+/** Delete a subject and all of its topics, chunks, sources, and learner state. */
+export function deleteSubject(id: string): void {
+  const topicIds = listTopics(id).map((t) => t.id);
+  if (topicIds.length > 0) {
+    db.delete(mastery).where(inArray(mastery.topicId, topicIds)).run();
+    db.delete(gaps).where(inArray(gaps.topicId, topicIds)).run();
+  }
+  db.delete(knowledgeChunks).where(eq(knowledgeChunks.subjectId, id)).run();
+  db.delete(sources).where(eq(sources.subjectId, id)).run();
+  db.delete(sessions).where(eq(sessions.subjectId, id)).run();
+  db.delete(topics).where(eq(topics.subjectId, id)).run();
+  db.delete(subjects).where(eq(subjects.id, id)).run();
 }

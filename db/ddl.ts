@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS students (
   name TEXT NOT NULL,
   color TEXT NOT NULL DEFAULT '#6366f1',
   pin_hash TEXT,
+  is_admin INTEGER NOT NULL DEFAULT 0,
   pace_pref TEXT NOT NULL DEFAULT 'normal',
   tone_pref TEXT NOT NULL DEFAULT 'encouraging',
   created_at INTEGER NOT NULL,
@@ -123,4 +124,5 @@ export function applySchema(db: DatabaseType.Database): void {
   db.exec(SCHEMA_SQL);
   // Backfill columns introduced after the initial schema for pre-existing DBs.
   ensureColumn(db, "knowledge_chunks", "source_id", "TEXT");
+  ensureColumn(db, "students", "is_admin", "INTEGER NOT NULL DEFAULT 0");
 }

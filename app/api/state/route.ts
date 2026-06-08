@@ -63,6 +63,7 @@ export async function GET() {
       id: student.id,
       name: student.name,
       color: student.color,
+      isAdmin: student.isAdmin,
       pacePref: student.pacePref,
       tonePref: student.tonePref,
     },
