@@ -393,6 +393,9 @@ export function AddMaterialModal({
   onClose: () => void;
 }) {
   const [topicId, setTopicId] = useState<string>("");
+  const [mode, setMode] = useState<"pdf" | "text" | "url">("pdf");
+  const [text, setText] = useState("");
+  const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
@@ -452,15 +455,68 @@ export function AddMaterialModal({
     }
   }
 
+  async function submitTextOrUrl() {
+    if (mode === "text" && text.trim().length < 20) {
+      setError("Paste at least a paragraph of text.");
+      return;
+    }
+    if (mode === "url" && !url.trim()) {
+      setError("Enter a URL.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/ingest/text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subjectId,
+          topicId: topicId || null,
+          ...(mode === "url" ? { url: url.trim() } : { text }),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok && res.status !== 202) {
+        setError(data.error ?? "Ingestion failed.");
+        return;
+      }
+      setText("");
+      setUrl("");
+      await refresh();
+    } catch {
+      setError("Ingestion failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const topicName = (id?: string | null) => topics.find((t) => t.id === id)?.name;
 
   return (
     <Modal onClose={onClose}>
       <h3 className="mb-1 text-lg font-semibold">Add material to {subjectName}</h3>
       <p className="mb-4 text-sm text-slate-400">
-        Upload a PDF (textbook, notes, paper). It is chunked and embedded locally so the tutor can ground its
-        answers in it.
+        Add a PDF, paste text, or pull from a web page. It is chunked and embedded locally so the tutor can
+        ground its answers in it.
       </p>
+
+      <div className="mb-4 flex gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1 text-sm">
+        {(["pdf", "text", "url"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => {
+              setMode(m);
+              setError(null);
+            }}
+            className={`flex-1 rounded-md px-3 py-1.5 capitalize transition-colors ${
+              mode === m ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            {m === "pdf" ? "PDF" : m === "url" ? "Web URL" : "Paste text"}
+          </button>
+        ))}
+      </div>
 
       <label className="mb-1 block text-sm text-slate-400">Attach to topic (optional)</label>
       <select
@@ -476,19 +532,46 @@ export function AddMaterialModal({
         ))}
       </select>
 
-      <input
-        ref={fileRef}
-        type="file"
-        accept="application/pdf,.pdf"
-        className="mb-3 block w-full text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-2 file:text-slate-200 hover:file:bg-slate-700"
-      />
+      {mode === "pdf" && (
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          className="mb-3 block w-full text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-2 file:text-slate-200 hover:file:bg-slate-700"
+        />
+      )}
+      {mode === "text" && (
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={6}
+          placeholder="Paste notes, an article, definitions, or any reference text…"
+          className="mb-3 w-full resize-none rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+        />
+      )}
+      {mode === "url" && (
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://en.wikipedia.org/wiki/…"
+          className="mb-3 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+        />
+      )}
       {error && <p className="mb-3 text-sm text-rose-400">{error}</p>}
       <button
-        onClick={upload}
+        onClick={mode === "pdf" ? upload : submitTextOrUrl}
         disabled={busy}
         className="mb-4 w-full rounded-lg bg-indigo-600 py-2 text-sm font-medium hover:bg-indigo-500 disabled:opacity-50"
       >
-        {busy ? "Uploading…" : "Upload & ingest"}
+        {busy
+          ? mode === "url"
+            ? "Fetching…"
+            : "Adding…"
+          : mode === "pdf"
+            ? "Upload & ingest"
+            : mode === "url"
+              ? "Fetch & ingest"
+              : "Add & ingest"}
       </button>
 
       {sources.length > 0 && (

@@ -386,6 +386,14 @@ function KnowledgeTab() {
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [busy, setBusy] = useState(false);
 
+  // "Add knowledge" form state.
+  const [addMode, setAddMode] = useState<"text" | "url">("text");
+  const [addTopicId, setAddTopicId] = useState("");
+  const [addText, setAddText] = useState("");
+  const [addUrl, setAddUrl] = useState("");
+  const [addBusy, setAddBusy] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
   useEffect(() => {
     fetch("/api/admin/curriculum").then((r) => r.json()).then((d) => {
       setSubjects(d.subjects ?? []);
@@ -430,6 +438,43 @@ function KnowledgeTab() {
     await fetch(`/api/admin/chunks?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     refresh();
   }
+
+  async function addKnowledge() {
+    if (addMode === "text" && addText.trim().length < 20) {
+      setAddError("Paste at least a paragraph of text.");
+      return;
+    }
+    if (addMode === "url" && !addUrl.trim()) {
+      setAddError("Enter a URL.");
+      return;
+    }
+    setAddBusy(true);
+    setAddError(null);
+    try {
+      const res = await fetch("/api/ingest/text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subjectId,
+          topicId: addTopicId || null,
+          ...(addMode === "url" ? { url: addUrl.trim() } : { text: addText }),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok && res.status !== 202) {
+        setAddError(data.error ?? "Ingestion failed.");
+        return;
+      }
+      setAddText("");
+      setAddUrl("");
+      refresh();
+    } catch {
+      setAddError("Ingestion failed.");
+    } finally {
+      setAddBusy(false);
+    }
+  }
+
   const topicName = (id: string | null) => (id ? subject?.topics.find((t) => t.id === id)?.name ?? id : "subject-level");
 
   return (
@@ -443,6 +488,61 @@ function KnowledgeTab() {
           <option value="__none">Subject-level (no topic)</option>
           {subject?.topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
+      </div>
+
+      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Add knowledge to {subject?.name ?? "subject"}
+          </h3>
+          <div className="flex gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1 text-xs">
+            {(["text", "url"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => { setAddMode(m); setAddError(null); }}
+                className={`rounded-md px-3 py-1 transition ${
+                  addMode === m ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {m === "url" ? "Web URL" : "Paste text"}
+              </button>
+            ))}
+          </div>
+        </div>
+        <select
+          value={addTopicId}
+          onChange={(e) => setAddTopicId(e.target.value)}
+          className="mb-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm outline-none focus:border-indigo-500"
+        >
+          <option value="">Whole subject (no topic)</option>
+          {subject?.topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+        {addMode === "text" ? (
+          <textarea
+            value={addText}
+            onChange={(e) => setAddText(e.target.value)}
+            rows={5}
+            placeholder="Paste notes, definitions, an article, or any reference text…"
+            className="w-full resize-none rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+          />
+        ) : (
+          <input
+            value={addUrl}
+            onChange={(e) => setAddUrl(e.target.value)}
+            placeholder="https://en.wikipedia.org/wiki/…"
+            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+          />
+        )}
+        {addError && <p className="mt-2 text-sm text-rose-400">{addError}</p>}
+        <div className="mt-3 flex justify-end">
+          <button
+            onClick={addKnowledge}
+            disabled={addBusy || !subjectId}
+            className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium hover:bg-indigo-500 disabled:opacity-50"
+          >
+            {addBusy ? (addMode === "url" ? "Fetching…" : "Adding…") : "Add & ingest"}
+          </button>
+        </div>
       </div>
 
       <div>

@@ -120,7 +120,14 @@ Once granted, an **Admin** button appears in the learning header. Access is gate
 Subjects, topics, and the knowledge base are all stored in the database, so you can grow the curriculum at runtime from the learning UI - no code changes or restarts.
 
 - **Add a subject:** in the sidebar, click **+ Add** next to "Subjects", enter a name (e.g. `Chemistry` - independent of the built-in `Organic Chemistry`), and optionally paste a chapter list/syllabus. The local model drafts a topic path with prerequisites that you can edit (rename, add/remove topics, set prerequisites) before saving. The new subject is shared with all profiles.
-- **Ground tutoring in a textbook:** with a subject selected, click **+ Material** above the topic list and upload a PDF (optionally attached to a specific topic). The file is extracted, chunked, and embedded locally; progress shows per source. Once ingested, the tutor's RAG retrieval uses it on the next turn.
+- **Teach it new knowledge:** with a subject selected, click **+ Material** above the topic list. You can add knowledge three ways (optionally attached to a specific topic):
+  - **PDF** — upload a textbook, notes, or paper.
+  - **Paste text** — drop in notes, definitions, or an article directly.
+  - **Web URL** — point at a web page; the host fetches it and extracts the readable text.
+
+  In every case the content is chunked and embedded locally (progress shows per source) and the tutor's RAG retrieval uses it on the next turn. Admins can also add text/URL knowledge from **Admin → Knowledge**.
+
+> The model itself is never fine-tuned — new knowledge is added via **retrieval-augmented generation (RAG)**: your material is embedded locally and the most relevant chunks are injected into the tutor's context at answer time. This is instant, needs no GPU training run, and is editable/removable anytime from the admin portal.
 
 PDFs are parsed with [`unpdf`](https://www.npmjs.com/package/unpdf) (pure JS, no native build, works on macOS and Windows). All ingested material stays on the host in SQLite - nothing is uploaded anywhere.
 
@@ -142,15 +149,16 @@ PDFs are parsed with [`unpdf`](https://www.npmjs.com/package/unpdf) (pure JS, no
 app/            Next.js routes + UI (profile landing, /learn tutor, /api/*)
 components/     Client UI (MarkdownLite, HealthBadge, ContentModals)
 lib/            ollama client, prompts, adaptive engine, RAG, orchestrator, data access,
-                chunk (shared splitter), pdf (text extraction), ingest, curriculum-gen
+                chunk (shared splitter), pdf (text extraction), html (URL fetch/extract),
+                ingest, curriculum-gen
 db/             Drizzle schema, connection, curriculum seed data
 scripts/        migrate.ts (create tables), seed.ts (curriculum + embeddings)
 content/        Markdown knowledge base, grouped by subject
 ```
 
 New API routes: `POST /api/curriculum/draft` (LLM topic draft), `POST /api/subjects`
-(create subject + topics), `POST /api/ingest` (upload PDF), `GET /api/sources`
-(ingestion status).
+(create subject + topics), `POST /api/ingest` (upload PDF), `POST /api/ingest/text`
+(paste text or fetch a URL), `GET /api/sources` (ingestion status).
 
 ## Notes on concurrency
 
