@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getActiveStudent } from "@/lib/session";
 import { getSubject, getTopic, createSource } from "@/lib/data";
 import { ingestText } from "@/lib/ingest";
-import { fetchUrlText } from "@/lib/html";
+import { fetchUrlText, fetchRaw, parseHttpUrl, httpErrorMessage } from "@/lib/html";
+import { crawlSite, MAX_CRAWL_PAGES, MAX_CRAWL_DEPTH } from "@/lib/crawl";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -22,6 +23,9 @@ export async function POST(req: Request) {
     text?: string;
     url?: string;
     name?: string;
+    crawl?: boolean;
+    maxPages?: number;
+    maxDepth?: number;
   };
   try {
     body = await req.json();
@@ -41,6 +45,32 @@ export async function POST(req: Request) {
 
   const url = body.url?.trim();
   const isUrl = !!url;
+
+  // Crawl mode: ingest a whole same-site section starting from the URL.
+  if (isUrl && body.crawl) {
+    let start;
+    try {
+      start = parseHttpUrl(url!);
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : "Invalid URL." }, { status: 400 });
+    }
+    // Fetch the start page synchronously so obvious failures surface immediately.
+    let seed;
+    try {
+      seed = await fetchRaw(start.toString());
+    } catch {
+      return NextResponse.json({ error: "Could not reach that URL." }, { status: 400 });
+    }
+    if (!seed.ok) {
+      return NextResponse.json({ error: httpErrorMessage(seed.status) }, { status: 400 });
+    }
+    const maxPages = Math.max(1, Math.min(Number(body.maxPages) || 50, MAX_CRAWL_PAGES));
+    const maxDepth = Math.max(0, Math.min(Number(body.maxDepth) || 3, MAX_CRAWL_DEPTH));
+    const name = (body.name?.trim() || `${start.hostname} (site crawl, up to ${maxPages} pages)`).slice(0, 200);
+    const source = createSource({ subjectId, topicId, kind: "crawl", name });
+    void crawlSite({ sourceId: source.id, subjectId, topicId, startUrl: start.toString(), maxPages, maxDepth, seed });
+    return NextResponse.json({ source }, { status: 202 });
+  }
 
   let text = "";
   let name = "";

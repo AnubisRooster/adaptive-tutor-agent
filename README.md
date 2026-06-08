@@ -123,9 +123,21 @@ Subjects, topics, and the knowledge base are all stored in the database, so you 
 - **Teach it new knowledge:** with a subject selected, click **+ Material** above the topic list. You can add knowledge three ways (optionally attached to a specific topic):
   - **PDF** — upload a textbook, notes, or paper.
   - **Paste text** — drop in notes, definitions, or an article directly.
-  - **Web URL** — point at a web page; the host fetches it and extracts the readable text.
+  - **Web URL** — point at a web page; the host fetches it and extracts the readable text. Tick **"Crawl linked pages on the same site"** to ingest a whole section/site instead of a single page (see below).
 
-  In every case the content is chunked and embedded locally (progress shows per source) and the tutor's RAG retrieval uses it on the next turn. Admins can also add text/URL knowledge from **Admin → Knowledge**.
+  In every case the content is chunked and embedded locally (progress shows per source) and the tutor's RAG retrieval uses it on the next turn. Admins can also add text/URL/crawl knowledge from **Admin → Knowledge**.
+
+### Crawling a website
+
+When you enable crawling on a URL, the host runs a **bounded, polite, same-site** crawler starting from that page:
+
+- **Same domain only** — it never wanders off `example.com` (www/non-www treated as the same site).
+- **Page cap** — you choose how many pages (default 50, hard max **150**); depth is bounded too.
+- **Respects `robots.txt`** and throttles between requests (honors `Crawl-delay`).
+- **Skips junk** — binaries/PDF/image links, and common non-content paths (`/login`, `/cart`, …).
+- Each page's text is chunked + embedded as it's discovered, tracked under one **crawl** source with live progress; chunks are labeled by page path so you can inspect/prune them in **Admin → Knowledge**.
+
+> Caveats: a plain fetch can't see content on heavily JavaScript-rendered sites, and big sites can take a long time to embed (every chunk is a sequential call to the local embedding model). Keep the page cap modest, and use **Paste text** for pages behind logins or bot-protection.
 
 > The model itself is never fine-tuned — new knowledge is added via **retrieval-augmented generation (RAG)**: your material is embedded locally and the most relevant chunks are injected into the tutor's context at answer time. This is instant, needs no GPU training run, and is editable/removable anytime from the admin portal.
 
@@ -150,7 +162,7 @@ app/            Next.js routes + UI (profile landing, /learn tutor, /api/*)
 components/     Client UI (MarkdownLite, HealthBadge, ContentModals)
 lib/            ollama client, prompts, adaptive engine, RAG, orchestrator, data access,
                 chunk (shared splitter), pdf (text extraction), html (URL fetch/extract),
-                ingest, curriculum-gen
+                robots (robots.txt), crawl (bounded site crawler), ingest, curriculum-gen
 db/             Drizzle schema, connection, curriculum seed data
 scripts/        migrate.ts (create tables), seed.ts (curriculum + embeddings)
 content/        Markdown knowledge base, grouped by subject

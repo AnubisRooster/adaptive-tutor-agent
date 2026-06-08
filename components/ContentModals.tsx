@@ -373,12 +373,14 @@ export function AddSubjectModal({
 type Source = {
   id: string;
   name: string;
-  status: "pending" | "extracting" | "embedding" | "done" | "error";
+  status: "pending" | "extracting" | "crawling" | "embedding" | "done" | "error";
   chunkCount: number;
   embeddedCount: number;
   error?: string | null;
   topicId?: string | null;
 };
+
+const ACTIVE_STATUSES = ["pending", "extracting", "crawling", "embedding"];
 type TopicLite = { id: string; name: string };
 
 export function AddMaterialModal({
@@ -396,6 +398,8 @@ export function AddMaterialModal({
   const [mode, setMode] = useState<"pdf" | "text" | "url">("pdf");
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
+  const [crawl, setCrawl] = useState(false);
+  const [maxPages, setMaxPages] = useState(50);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
@@ -419,9 +423,7 @@ export function AddMaterialModal({
 
   // Poll while anything is still processing.
   useEffect(() => {
-    const active = sources.some(
-      (s) => s.status === "pending" || s.status === "extracting" || s.status === "embedding"
-    );
+    const active = sources.some((s) => ACTIVE_STATUSES.includes(s.status));
     if (!active) return;
     const t = setInterval(refresh, 1500);
     return () => clearInterval(t);
@@ -473,7 +475,9 @@ export function AddMaterialModal({
         body: JSON.stringify({
           subjectId,
           topicId: topicId || null,
-          ...(mode === "url" ? { url: url.trim() } : { text }),
+          ...(mode === "url"
+            ? { url: url.trim(), ...(crawl ? { crawl: true, maxPages } : {}) }
+            : { text }),
         }),
       });
       const data = await res.json();
@@ -497,8 +501,8 @@ export function AddMaterialModal({
     <Modal onClose={onClose}>
       <h3 className="mb-1 text-lg font-semibold">Add material to {subjectName}</h3>
       <p className="mb-4 text-sm text-slate-400">
-        Add a PDF, paste text, or pull from a web page. It is chunked and embedded locally so the tutor can
-        ground its answers in it.
+        Add a PDF, paste text, or pull from a web page (optionally crawling the rest of the site). It is
+        chunked and embedded locally so the tutor can ground its answers in it.
       </p>
 
       <div className="mb-4 flex gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1 text-sm">
@@ -550,12 +554,32 @@ export function AddMaterialModal({
         />
       )}
       {mode === "url" && (
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://en.wikipedia.org/wiki/…"
-          className="mb-3 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
-        />
+        <>
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://en.wikipedia.org/wiki/…"
+            className="mb-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+          />
+          <label className="mb-2 flex items-center gap-2 text-sm text-slate-300">
+            <input type="checkbox" checked={crawl} onChange={(e) => setCrawl(e.target.checked)} className="accent-indigo-500" />
+            Crawl linked pages on the same site
+          </label>
+          {crawl && (
+            <div className="mb-3 flex items-center gap-2 text-xs text-slate-400">
+              <span>Max pages</span>
+              <input
+                type="number"
+                min={1}
+                max={150}
+                value={maxPages}
+                onChange={(e) => setMaxPages(Math.max(1, Math.min(150, Number(e.target.value) || 1)))}
+                className="w-20 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 outline-none focus:border-indigo-500"
+              />
+              <span className="text-slate-500">same domain only · respects robots.txt · max 150</span>
+            </div>
+          )}
+        </>
       )}
       {error && <p className="mb-3 text-sm text-rose-400">{error}</p>}
       <button
@@ -565,12 +589,16 @@ export function AddMaterialModal({
       >
         {busy
           ? mode === "url"
-            ? "Fetching…"
+            ? crawl
+              ? "Starting crawl…"
+              : "Fetching…"
             : "Adding…"
           : mode === "pdf"
             ? "Upload & ingest"
             : mode === "url"
-              ? "Fetch & ingest"
+              ? crawl
+                ? "Crawl & ingest"
+                : "Fetch & ingest"
               : "Add & ingest"}
       </button>
 
@@ -579,11 +607,11 @@ export function AddMaterialModal({
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Ingested material</h4>
           <ul className="space-y-2">
             {sources.map((s) => {
-              const inProgress = s.status === "pending" || s.status === "extracting" || s.status === "embedding";
+              const inProgress = ACTIVE_STATUSES.includes(s.status);
               const pct =
                 s.status === "done"
                   ? 100
-                  : s.status === "embedding" && s.chunkCount > 0
+                  : (s.status === "embedding" || s.status === "crawling") && s.chunkCount > 0
                     ? Math.round((s.embeddedCount / s.chunkCount) * 100)
                     : null;
               return (
@@ -600,11 +628,13 @@ export function AddMaterialModal({
                       ? "queued…"
                       : s.status === "extracting"
                         ? "extracting text from PDF…"
-                        : s.status === "embedding"
-                          ? `embedding ${s.embeddedCount}/${s.chunkCount} chunks…`
-                          : s.status === "done"
-                            ? `${s.chunkCount} chunks (${s.embeddedCount} embedded)`
-                            : s.error || "failed"}
+                        : s.status === "crawling"
+                          ? `crawling site… ${s.embeddedCount}/${s.chunkCount} chunks embedded`
+                          : s.status === "embedding"
+                            ? `embedding ${s.embeddedCount}/${s.chunkCount} chunks…`
+                            : s.status === "done"
+                              ? `${s.chunkCount} chunks (${s.embeddedCount} embedded)`
+                              : s.error || "failed"}
                   </div>
                   {(inProgress || s.status === "done") && (
                     <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
@@ -630,6 +660,7 @@ function StatusBadge({ status }: { status: Source["status"] }) {
   const map: Record<Source["status"], string> = {
     pending: "bg-slate-700 text-slate-300",
     extracting: "bg-sky-500/15 text-sky-300",
+    crawling: "bg-violet-500/15 text-violet-300",
     embedding: "bg-amber-500/15 text-amber-300",
     done: "bg-emerald-500/15 text-emerald-300",
     error: "bg-rose-500/15 text-rose-300",

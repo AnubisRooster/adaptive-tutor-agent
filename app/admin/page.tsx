@@ -391,6 +391,8 @@ function KnowledgeTab() {
   const [addTopicId, setAddTopicId] = useState("");
   const [addText, setAddText] = useState("");
   const [addUrl, setAddUrl] = useState("");
+  const [addCrawl, setAddCrawl] = useState(false);
+  const [addMaxPages, setAddMaxPages] = useState(50);
   const [addBusy, setAddBusy] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
@@ -417,7 +419,7 @@ function KnowledgeTab() {
 
   // Poll while any source is still processing.
   useEffect(() => {
-    if (!sources.some((s) => ["pending", "extracting", "embedding"].includes(s.status))) return;
+    if (!sources.some((s) => ["pending", "extracting", "crawling", "embedding"].includes(s.status))) return;
     const t = setInterval(refresh, 1500);
     return () => clearInterval(t);
   }, [sources, refresh]);
@@ -457,7 +459,9 @@ function KnowledgeTab() {
         body: JSON.stringify({
           subjectId,
           topicId: addTopicId || null,
-          ...(addMode === "url" ? { url: addUrl.trim() } : { text: addText }),
+          ...(addMode === "url"
+            ? { url: addUrl.trim(), ...(addCrawl ? { crawl: true, maxPages: addMaxPages } : {}) }
+            : { text: addText }),
         }),
       });
       const data = await res.json();
@@ -526,12 +530,32 @@ function KnowledgeTab() {
             className="w-full resize-none rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
           />
         ) : (
-          <input
-            value={addUrl}
-            onChange={(e) => setAddUrl(e.target.value)}
-            placeholder="https://en.wikipedia.org/wiki/…"
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
-          />
+          <>
+            <input
+              value={addUrl}
+              onChange={(e) => setAddUrl(e.target.value)}
+              placeholder="https://en.wikipedia.org/wiki/…"
+              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+            />
+            <label className="mt-2 flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" checked={addCrawl} onChange={(e) => setAddCrawl(e.target.checked)} className="accent-indigo-500" />
+              Crawl linked pages on the same site
+            </label>
+            {addCrawl && (
+              <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+                <span>Max pages</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={150}
+                  value={addMaxPages}
+                  onChange={(e) => setAddMaxPages(Math.max(1, Math.min(150, Number(e.target.value) || 1)))}
+                  className="w-20 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 outline-none focus:border-indigo-500"
+                />
+                <span className="text-slate-500">same domain only · respects robots.txt · max 150</span>
+              </div>
+            )}
+          </>
         )}
         {addError && <p className="mt-2 text-sm text-rose-400">{addError}</p>}
         <div className="mt-3 flex justify-end">
@@ -540,7 +564,15 @@ function KnowledgeTab() {
             disabled={addBusy || !subjectId}
             className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium hover:bg-indigo-500 disabled:opacity-50"
           >
-            {addBusy ? (addMode === "url" ? "Fetching…" : "Adding…") : "Add & ingest"}
+            {addBusy
+              ? addMode === "url"
+                ? addCrawl
+                  ? "Starting crawl…"
+                  : "Fetching…"
+                : "Adding…"
+              : addMode === "url" && addCrawl
+                ? "Crawl & ingest"
+                : "Add & ingest"}
           </button>
         </div>
       </div>
