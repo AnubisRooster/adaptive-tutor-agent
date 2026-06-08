@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS topics (
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   prerequisites TEXT NOT NULL DEFAULT '[]',
+  subtopics TEXT NOT NULL DEFAULT '[]',
   order_index INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS topics_by_subject ON topics(subject_id);
@@ -125,4 +126,5 @@ export function applySchema(db: DatabaseType.Database): void {
   // Backfill columns introduced after the initial schema for pre-existing DBs.
   ensureColumn(db, "knowledge_chunks", "source_id", "TEXT");
   ensureColumn(db, "students", "is_admin", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "topics", "subtopics", "TEXT NOT NULL DEFAULT '[]'");
 }

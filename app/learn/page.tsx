@@ -8,6 +8,9 @@ import { AddSubjectModal, AddMaterialModal } from "@/components/ContentModals";
 
 const BLOOM = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"];
 
+type Subtopic = { name: string; description: string };
+type SubtopicState = { status: "loading" | "ready" | "error"; items: Subtopic[]; error?: string };
+type Focus = { topicId: string; name: string; description: string };
 type Topic = {
   id: string;
   name: string;
@@ -52,6 +55,9 @@ export default function LearnPage() {
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [showAddMaterial, setShowAddMaterial] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [subtopics, setSubtopics] = useState<Record<string, SubtopicState>>({});
+  const [focus, setFocus] = useState<Focus | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const subject = useMemo(() => data?.subjects.find((s) => s.id === subjectId), [data, subjectId]);
@@ -110,6 +116,7 @@ export default function LearnPage() {
     }
     setSubjectId(sid);
     setPendingQuestion(null);
+    setFocus(null);
     const s = data?.subjects.find((x) => x.id === sid);
     setTopicId(s?.recommendedTopicId ?? s?.topics[0]?.id ?? "");
     await loadMessages(sid);
@@ -127,12 +134,57 @@ export default function LearnPage() {
     }
   }
 
+  const loadSubtopics = useCallback(async (tid: string, refresh = false) => {
+    setSubtopics((prev) => ({ ...prev, [tid]: { status: "loading", items: prev[tid]?.items ?? [] } }));
+    try {
+      const res = await fetch("/api/subtopics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topicId: tid, refresh }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !Array.isArray(d.subtopics)) {
+        setSubtopics((prev) => ({ ...prev, [tid]: { status: "error", items: [], error: d.error ?? "Couldn't load sub-areas." } }));
+        return;
+      }
+      setSubtopics((prev) => ({ ...prev, [tid]: { status: "ready", items: d.subtopics } }));
+    } catch {
+      setSubtopics((prev) => ({ ...prev, [tid]: { status: "error", items: [], error: "Couldn't reach the model." } }));
+    }
+  }, []);
+
+  function toggleExpand(tid: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(tid)) {
+        next.delete(tid);
+      } else {
+        next.add(tid);
+        if (!subtopics[tid] || subtopics[tid].status === "error") loadSubtopics(tid);
+      }
+      return next;
+    });
+  }
+
+  function selectSubtopic(tid: string, st: Subtopic) {
+    setTopicId(tid);
+    setPendingQuestion(null);
+    setFocus({ topicId: tid, name: st.name, description: st.description });
+    setNavOpen(false);
+    streamTutor("teach", `Please teach me about "${st.name}" within this topic.`, { topicId: tid, name: st.name, description: st.description });
+  }
+
   function historyForApi() {
     return messages.map((m) => ({ role: m.role, content: m.content }));
   }
 
-  async function streamTutor(mode: "teach" | "quiz" | "review" | "diagnostic", userContent?: string) {
-    if (busy || !subjectId || !topicId) return;
+  async function streamTutor(
+    mode: "teach" | "quiz" | "review" | "diagnostic",
+    userContent?: string,
+    focusArg?: Focus
+  ) {
+    const tid = focusArg?.topicId ?? topicId;
+    if (busy || !subjectId || !tid) return;
     setBusy(true);
     const history = historyForApi();
     if (userContent) {
@@ -141,11 +193,18 @@ export default function LearnPage() {
     }
     setMessages((m) => [...m, { role: "assistant", content: "" }]);
 
+    const activeFocus = focusArg ?? (focus && focus.topicId === tid ? focus : null);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subjectId, topicId, mode, history }),
+        body: JSON.stringify({
+          subjectId,
+          topicId: tid,
+          mode,
+          history,
+          ...(activeFocus ? { focus: { name: activeFocus.name, description: activeFocus.description } } : {}),
+        }),
       });
       if (!res.ok || !res.body) {
         const txt = await res.text().catch(() => "");
@@ -174,11 +233,17 @@ export default function LearnPage() {
     setBusy(true);
     setPendingQuestion(null);
     setMessages((m) => [...m, { role: "assistant", content: "" }]);
+    const activeFocus = focus && focus.topicId === topicId ? focus : null;
     try {
       const res = await fetch("/api/quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subjectId, topicId, kind }),
+        body: JSON.stringify({
+          subjectId,
+          topicId,
+          kind,
+          ...(activeFocus ? { focus: { name: activeFocus.name, description: activeFocus.description } } : {}),
+        }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok || !d.question) {
@@ -393,24 +458,98 @@ export default function LearnPage() {
                 </button>
               </div>
               <div className="space-y-1.5">
-                {subject.topics.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => { setTopicId(t.id); setPendingQuestion(null); setNavOpen(false); }}
-                    className={`w-full rounded-lg border p-2.5 text-left transition ${
-                      t.id === topicId ? "border-indigo-500 bg-indigo-500/10" : "border-slate-800 hover:border-slate-700"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-200">
-                        {t.name}
-                        {!t.unlocked && <span className="ml-1 text-slate-500" title="Prerequisites not yet met">🔒</span>}
-                      </span>
-                      <span className="text-[10px] text-slate-500">{BLOOM[(t.bloomLevel ?? 1) - 1]}</span>
+                {subject.topics.map((t) => {
+                  const isOpen = expanded.has(t.id);
+                  const sub = subtopics[t.id];
+                  return (
+                    <div
+                      key={t.id}
+                      className={`rounded-lg border transition ${
+                        t.id === topicId ? "border-indigo-500 bg-indigo-500/10" : "border-slate-800"
+                      }`}
+                    >
+                      <div className="flex items-stretch">
+                        <button
+                          onClick={() => { setTopicId(t.id); setPendingQuestion(null); setFocus(null); setNavOpen(false); }}
+                          className="flex-1 rounded-l-lg p-2.5 text-left hover:bg-slate-800/40"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-slate-200">
+                              {t.name}
+                              {!t.unlocked && <span className="ml-1 text-slate-500" title="Prerequisites not yet met">🔒</span>}
+                            </span>
+                            <span className="text-[10px] text-slate-500">{BLOOM[(t.bloomLevel ?? 1) - 1]}</span>
+                          </div>
+                          <MasteryBar value={t.mastery} />
+                        </button>
+                        <button
+                          onClick={() => toggleExpand(t.id)}
+                          className="flex w-9 shrink-0 items-center justify-center rounded-r-lg border-l border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                          title={isOpen ? "Hide sub-areas" : "Show sub-areas to drill into"}
+                          aria-label="Toggle sub-areas"
+                        >
+                          <svg
+                            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                            className={`transition-transform ${isOpen ? "rotate-90" : ""}`}
+                          >
+                            <polyline points="9 6 15 12 9 18" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {isOpen && (
+                        <div className="border-t border-slate-800 p-2">
+                          {(!sub || sub.status === "loading") && (
+                            <div className="flex items-center gap-2 px-1 py-1.5 text-xs text-slate-400">
+                              <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-indigo-400" />
+                              Generating sub-areas…
+                            </div>
+                          )}
+                          {sub?.status === "error" && (
+                            <div className="px-1 py-1 text-xs text-rose-400">
+                              {sub.error}{" "}
+                              <button onClick={() => loadSubtopics(t.id)} className="underline hover:text-rose-300">retry</button>
+                            </div>
+                          )}
+                          {sub?.status === "ready" && (
+                            <>
+                              <ul className="space-y-1">
+                                {sub.items.map((st, i) => {
+                                  const on = focus?.topicId === t.id && focus?.name === st.name;
+                                  return (
+                                    <li key={i}>
+                                      <button
+                                        onClick={() => selectSubtopic(t.id, st)}
+                                        disabled={busy}
+                                        title={st.description}
+                                        className={`w-full rounded-md px-2 py-1.5 text-left text-xs transition disabled:opacity-50 ${
+                                          on ? "bg-indigo-600 text-white" : "text-slate-300 hover:bg-slate-800"
+                                        }`}
+                                      >
+                                        <span className="font-medium">{st.name}</span>
+                                        {st.description && (
+                                          <span className={`mt-0.5 block leading-snug ${on ? "text-indigo-100" : "text-slate-500"}`}>
+                                            {st.description}
+                                          </span>
+                                        )}
+                                      </button>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                              <button
+                                onClick={() => loadSubtopics(t.id, true)}
+                                className="mt-1.5 px-2 text-[11px] text-slate-500 hover:text-slate-300"
+                              >
+                                ↻ Regenerate sub-areas
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <MasteryBar value={t.mastery} />
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
@@ -434,7 +573,7 @@ export default function LearnPage() {
           {topic && (
             <div className="border-b border-slate-800 px-5 py-3">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-base font-semibold">{topic.name}</h2>
                   <p className="text-xs text-slate-400">{topic.description}</p>
                 </div>
@@ -443,8 +582,34 @@ export default function LearnPage() {
                   <div>Level: {BLOOM[(topic.bloomLevel ?? 1) - 1]}</div>
                 </div>
               </div>
+              {focus && focus.topicId === topicId && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/15 px-2.5 py-1 text-xs text-indigo-200">
+                    <span className="text-indigo-400">Focus:</span>
+                    <span className="font-medium">{focus.name}</span>
+                    <button
+                      onClick={() => setFocus(null)}
+                      className="ml-0.5 text-indigo-300 hover:text-white"
+                      title="Clear focus — teach the whole topic"
+                      aria-label="Clear focus"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                </div>
+              )}
               <div className="mt-3 flex flex-wrap gap-2">
-                <ActionBtn disabled={busy} onClick={() => streamTutor("teach", `Please teach me the next step on "${topic.name}".`)}>
+                <ActionBtn
+                  disabled={busy}
+                  onClick={() =>
+                    streamTutor(
+                      "teach",
+                      focus && focus.topicId === topicId
+                        ? `Please teach me more about "${focus.name}".`
+                        : `Please teach me the next step on "${topic.name}".`
+                    )
+                  }
+                >
                   Teach me this
                 </ActionBtn>
                 <ActionBtn disabled={busy} onClick={() => askQuiz("quiz")}>Quiz me</ActionBtn>

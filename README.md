@@ -115,6 +115,22 @@ npm run admin:grant -- --revoke "Mike"
 
 Once granted, an **Admin** button appears in the learning header. Access is gated by being signed in as that admin profile (its PIN is the lock), and every `/api/admin/*` route rejects non-admins.
 
+## Drilling into subtopics
+
+Every topic in the sidebar has a **▸ expander**. Open it and the tutor generates a list of
+**sub-areas/themes** for that topic (e.g. under "Logic & Argument": validity, soundness, deductive
+vs. inductive reasoning, formal/informal fallacies…). These are:
+
+- **Generated on first open** by the local model (grounded in any ingested material), then **cached**
+  on the topic and **shared across all profiles** — so subsequent opens are instant. Use **↻ Regenerate**
+  to refresh them.
+- **Selectable** — clicking a sub-area sets a **Focus** (shown as a chip in the topic header) and the
+  tutor centers teaching and quizzes on exactly that sub-area. Clear the chip (✕) to return to the whole
+  topic, or switch sub-areas anytime.
+
+Mastery is still tracked at the topic level; subtopics are about letting students steer *what* they learn
+within a topic.
+
 ## Adding subjects & textbooks
 
 Subjects, topics, and the knowledge base are all stored in the database, so you can grow the curriculum at runtime from the learning UI - no code changes or restarts.
@@ -162,7 +178,8 @@ app/            Next.js routes + UI (profile landing, /learn tutor, /api/*)
 components/     Client UI (MarkdownLite, HealthBadge, ContentModals)
 lib/            ollama client, prompts, adaptive engine, RAG, orchestrator, data access,
                 chunk (shared splitter), pdf (text extraction), html (URL fetch/extract),
-                robots (robots.txt), crawl (bounded site crawler), ingest, curriculum-gen
+                robots (robots.txt), crawl (bounded site crawler), ingest, curriculum-gen,
+                subtopics-gen (topic sub-areas)
 db/             Drizzle schema, connection, curriculum seed data
 scripts/        migrate.ts (create tables), seed.ts (curriculum + embeddings)
 content/        Markdown knowledge base, grouped by subject

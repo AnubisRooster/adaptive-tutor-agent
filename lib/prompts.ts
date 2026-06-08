@@ -26,6 +26,8 @@ const BASE_RULES = `You are an expert, caring personal tutor and mentor. Your go
 6. Be accurate. If you are unsure, say so rather than inventing facts. Prefer the provided reference context when relevant.
 7. Use clear formatting (short paragraphs, lists, and fenced code blocks for code).`;
 
+export type Focus = { name: string; description?: string };
+
 export function buildTutorSystemPrompt(args: {
   student: Student;
   subject: Subject;
@@ -34,8 +36,9 @@ export function buildTutorSystemPrompt(args: {
   openGaps: Gap[];
   contextText: string;
   mode: TutorMode;
+  focus?: Focus;
 }): string {
-  const { student, subject, topic, masteryRow, openGaps, contextText, mode } = args;
+  const { student, subject, topic, masteryRow, openGaps, contextText, mode, focus } = args;
   const m = masteryRow?.mastery ?? 0;
   const bloom = masteryRow?.bloomLevel ?? 1;
   const tone = TONE_GUIDE[student.tonePref] ?? TONE_GUIDE.encouraging;
@@ -60,6 +63,12 @@ export function buildTutorSystemPrompt(args: {
     ? `\nReference context (ground your explanation in this; do not contradict it):\n${contextText}`
     : "";
 
+  const focusBlock = focus
+    ? `\nFOCUS: The student chose to drill into the sub-area "${focus.name}"${
+        focus.description ? ` (${focus.description})` : ""
+      } within this topic. Center this turn specifically on that sub-area; do not drift to the rest of the topic unless it's needed to support it.`
+    : "";
+
   return `${BASE_RULES}
 
 Tone: ${tone}
@@ -72,7 +81,7 @@ Student: ${student.name}.
 Estimated mastery of this topic: ${(m * 100).toFixed(0)}% (${masteryBand(m)}).
 Target cognitive level (Bloom's): ${bloomName(bloom)} (level ${bloom}).
 Calibrate difficulty to that mastery and Bloom level. If mastery is low, build from fundamentals with simple language and concrete examples. If high, push toward analysis, evaluation, and synthesis.
-${modeLine}${gapsBlock}${contextBlock}`;
+${modeLine}${focusBlock}${gapsBlock}${contextBlock}`;
 }
 
 // Evaluator: grade a single answer. Returns guidance that the system uses to

@@ -114,6 +114,27 @@ export function topicPrerequisites(topic: Topic): string[] {
   }
 }
 
+export type Subtopic = { name: string; description: string };
+
+export function getTopicSubtopics(topic: Topic): Subtopic[] {
+  try {
+    const parsed = JSON.parse(topic.subtopics);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((s) => s && typeof s.name === "string")
+      .map((s) => ({ name: String(s.name).slice(0, 120), description: String(s.description ?? "").slice(0, 300) }));
+  } catch {
+    return [];
+  }
+}
+
+export function setTopicSubtopics(topicId: string, subtopics: Subtopic[]): void {
+  db.update(topics)
+    .set({ subtopics: JSON.stringify(subtopics.slice(0, 12)) })
+    .where(eq(topics.id, topicId))
+    .run();
+}
+
 /** Turn a free-text subject name into a stable, url-safe slug id. */
 export function slugify(input: string): string {
   return input

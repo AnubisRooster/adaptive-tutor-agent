@@ -17,6 +17,7 @@ export async function generateQuizQuestion(args: {
   subjectId: string;
   topicId: string;
   kind?: "quiz" | "diagnostic";
+  focus?: { name: string; description?: string };
 }): Promise<QuizQuestion> {
   const student = getStudent(args.studentId);
   const subject = getSubject(args.subjectId);
@@ -27,7 +28,11 @@ export async function generateQuizQuestion(args: {
   const bloom = masteryRow?.bloomLevel ?? 1;
   const mastery = masteryRow?.mastery ?? 0;
   const gaps = listOpenGaps(student.id, topic.id);
-  const retrieved = await retrieveContext(subject.id, topic.id, `${topic.name}: ${topic.description}`, 4);
+  const focus = args.focus?.name ? args.focus : undefined;
+  const retrieveQuery = focus
+    ? `${topic.name} — ${focus.name}: ${focus.description ?? ""}`
+    : `${topic.name}: ${topic.description}`;
+  const retrieved = await retrieveContext(subject.id, topic.id, retrieveQuery, 4);
   const ctx = contextBlock(retrieved);
 
   const kind = args.kind ?? "quiz";
@@ -39,6 +44,9 @@ export async function generateQuizQuestion(args: {
   const gapsLine = gaps.length
     ? `\nKnown gaps to probe if natural: ${gaps.map((g) => g.misconception).join("; ")}`
     : "";
+  const focusLine = focus
+    ? `\nFocus the question specifically on the sub-area "${focus.name}"${focus.description ? ` (${focus.description})` : ""} within this topic.`
+    : "";
   const ctxLine = ctx
     ? `\n\nReference context (base the question on this; do not contradict it):\n${ctx}`
     : "";
@@ -47,7 +55,7 @@ export async function generateQuizQuestion(args: {
 Topic: ${topic.name} — ${topic.description}
 Student mastery of this topic: ${(mastery * 100).toFixed(0)}%
 Target cognitive level (Bloom's): ${bloomName(bloom)} (level ${bloom}).
-Calibrate difficulty to that mastery and Bloom level.${gapsLine}${ctxLine}
+Calibrate difficulty to that mastery and Bloom level.${focusLine}${gapsLine}${ctxLine}
 
 Write the question as JSON. Put the question text in "question", set "bloomLevel" to ${bloom}, and put a brief grading rubric in "idealAnswerOutline".`;
 

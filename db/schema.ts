@@ -32,6 +32,8 @@ export const topics = sqliteTable(
     description: text("description").notNull().default(""),
     // JSON array of topic ids that should be learned first.
     prerequisites: text("prerequisites").notNull().default("[]"),
+    // JSON array of { name, description } sub-areas a student can drill into.
+    subtopics: text("subtopics").notNull().default("[]"),
     orderIndex: integer("order_index").notNull().default(0),
   },
   (t) => ({

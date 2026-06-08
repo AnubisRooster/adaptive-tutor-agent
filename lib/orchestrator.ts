@@ -1,6 +1,6 @@
 import { getStudent, getSubject, getTopic, getMastery, listOpenGaps } from "@/lib/data";
 import { retrieveContext, contextBlock } from "@/lib/rag";
-import { buildTutorSystemPrompt, type TutorMode } from "@/lib/prompts";
+import { buildTutorSystemPrompt, type TutorMode, type Focus } from "@/lib/prompts";
 import type { OllamaMessage } from "@/lib/ollama";
 
 export type ChatTurnInput = {
@@ -9,6 +9,7 @@ export type ChatTurnInput = {
   topicId: string;
   mode: TutorMode;
   history: { role: "user" | "assistant"; content: string }[];
+  focus?: Focus;
 };
 
 export type BuiltTurn = {
@@ -29,9 +30,12 @@ export async function buildTutorTurn(input: ChatTurnInput): Promise<BuiltTurn> {
   const masteryRow = getMastery(student.id, topic.id);
   const openGaps = listOpenGaps(student.id, topic.id);
 
-  // Retrieval query: the latest user turn, else the topic itself.
+  // Retrieval query: the latest user turn, else the focus/topic itself.
   const lastUser = [...input.history].reverse().find((m) => m.role === "user");
-  const query = lastUser?.content?.trim() || `${topic.name}: ${topic.description}`;
+  const baseQuery = input.focus
+    ? `${topic.name} — ${input.focus.name}: ${input.focus.description ?? ""}`
+    : `${topic.name}: ${topic.description}`;
+  const query = lastUser?.content?.trim() || baseQuery;
   const retrieved = await retrieveContext(subject.id, topic.id, query, 4);
 
   const system = buildTutorSystemPrompt({
@@ -42,6 +46,7 @@ export async function buildTutorTurn(input: ChatTurnInput): Promise<BuiltTurn> {
     openGaps,
     contextText: contextBlock(retrieved),
     mode: input.mode,
+    focus: input.focus,
   });
 
   // Keep the recent window small for small models.

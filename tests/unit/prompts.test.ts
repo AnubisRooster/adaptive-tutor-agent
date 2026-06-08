@@ -28,6 +28,7 @@ const topic: Topic = {
   name: "Logic & Argument",
   description: "Validity and soundness.",
   prerequisites: "[]",
+  subtopics: "[]",
   orderIndex: 0,
 };
 
@@ -90,6 +91,21 @@ describe("buildTutorSystemPrompt", () => {
     expect(quiz).toMatch(/MODE: QUIZ/);
     const diag = buildTutorSystemPrompt({ student, subject, topic, masteryRow, openGaps: [], contextText: "", mode: "diagnostic" });
     expect(diag).toMatch(/MODE: DIAGNOSTIC/);
+  });
+
+  it("includes a FOCUS line when a sub-area is selected", () => {
+    const p = buildTutorSystemPrompt({
+      student,
+      subject,
+      topic,
+      masteryRow,
+      openGaps: [],
+      contextText: "",
+      mode: "teach",
+      focus: { name: "Formal Fallacies", description: "Errors in logical form." },
+    });
+    expect(p).toMatch(/FOCUS:/);
+    expect(p).toMatch(/Formal Fallacies/);
   });
 });
 

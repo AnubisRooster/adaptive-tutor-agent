@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { GradeSchema, QuizQuestionSchema, CurriculumDraftSchema } from "@/lib/schemas";
+import { GradeSchema, QuizQuestionSchema, CurriculumDraftSchema, SubtopicsSchema } from "@/lib/schemas";
 
 describe("GradeSchema", () => {
   it("accepts a well-formed grade", () => {
@@ -87,6 +87,26 @@ describe("CurriculumDraftSchema", () => {
   it("rejects a draft missing the subject", () => {
     const parsed = CurriculumDraftSchema.safeParse({
       topics: [{ name: "A", description: "d", prerequisiteIndexes: [] }],
+    });
+    expect(parsed.success).toBe(false);
+  });
+});
+
+describe("SubtopicsSchema", () => {
+  it("accepts a valid set of sub-areas", () => {
+    const parsed = SubtopicsSchema.safeParse({
+      subtopics: [
+        { name: "Validity", description: "When the conclusion follows from the premises." },
+        { name: "Soundness", description: "Valid plus true premises." },
+        { name: "Fallacies", description: "Common errors in reasoning." },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects fewer than 3 sub-areas", () => {
+    const parsed = SubtopicsSchema.safeParse({
+      subtopics: [{ name: "Validity", description: "..." }],
     });
     expect(parsed.success).toBe(false);
   });

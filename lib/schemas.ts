@@ -47,6 +47,21 @@ export const CurriculumDraftSchema = z.object({
 });
 export type CurriculumDraft = z.infer<typeof CurriculumDraftSchema>;
 
+// A set of learnable sub-areas/themes a student can drill into within a topic.
+export const SubtopicsSchema = z.object({
+  subtopics: z
+    .array(
+      z.object({
+        name: z.string().describe("Short sub-area / theme name (a few words)"),
+        description: z.string().describe("One concise sentence on what this sub-area covers"),
+      })
+    )
+    .min(3)
+    .max(10)
+    .describe("Distinct sub-areas within the topic, from foundational to advanced"),
+});
+export type SubtopicsDraft = z.infer<typeof SubtopicsSchema>;
+
 // A single quiz question generated for the current topic + Bloom level.
 export const QuizQuestionSchema = z.object({
   question: z.string().describe("The question text"),

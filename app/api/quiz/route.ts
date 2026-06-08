@@ -10,6 +10,7 @@ type Body = {
   subjectId?: string;
   topicId?: string;
   kind?: "quiz" | "diagnostic";
+  focus?: { name: string; description?: string };
 };
 
 // Generate one structured question for the current topic. Persisted as an
@@ -36,6 +37,7 @@ export async function POST(req: Request) {
       subjectId,
       topicId,
       kind: body.kind === "diagnostic" ? "diagnostic" : "quiz",
+      focus: body.focus?.name ? { name: body.focus.name, description: body.focus.description } : undefined,
     });
     const session = getOrCreateSession(student.id, subjectId);
     addMessage({ sessionId: session.id, studentId: student.id, role: "assistant", content: q.question, topicId });

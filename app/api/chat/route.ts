@@ -11,6 +11,7 @@ type Body = {
   topicId: string;
   mode?: TutorMode;
   history: { role: "user" | "assistant"; content: string }[];
+  focus?: { name: string; description?: string };
 };
 
 export async function POST(req: Request) {
@@ -37,9 +38,11 @@ export async function POST(req: Request) {
     addMessage({ sessionId: session.id, studentId: student.id, role: "user", content: lastUser.content, topicId });
   }
 
+  const focus = body.focus?.name ? { name: body.focus.name, description: body.focus.description } : undefined;
+
   let built;
   try {
-    built = await buildTutorTurn({ studentId: student.id, subjectId, topicId, mode, history });
+    built = await buildTutorTurn({ studentId: student.id, subjectId, topicId, mode, history, focus });
   } catch (err) {
     return new Response(err instanceof Error ? err.message : "Failed to start tutor.", { status: 400 });
   }
