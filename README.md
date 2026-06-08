@@ -26,7 +26,30 @@ ollama pull nomic-embed-text   # embeddings for RAG grounding
 
 You can use any chat model you have pulled (e.g. `gemma4:e4b-it-qat`, `gemma4`, `llama3.2:3b`, `qwen2.5:7b`) by setting `TUTOR_MODEL` in `.env` to the **exact** tag. On a Mac Mini / Apple Silicon, the QAT `gemma4:e4b-it-qat` is markedly faster than the full `gemma4` while keeping good tutoring quality. Note: Gemma is a chat/vision model and cannot produce embeddings, so `nomic-embed-text` (or another embedding model) is still needed for retrieval.
 
-## Setup
+## Quick start (one command + a desktop icon)
+
+After installing **Node 20+** and **Ollama** (above), from the project folder run:
+
+```bash
+node scripts/setup.mjs      # macOS, Windows, or Linux
+```
+
+This single command: creates `.env`, pulls the configured models, installs dependencies, builds the app, seeds the database, and creates a **double-clickable launcher on your Desktop** ("Adaptive Tutor"):
+
+- **macOS:** an `Adaptive Tutor.app` you can keep in the Dock or drag to `/Applications`.
+- **Windows:** an `Adaptive Tutor` desktop shortcut.
+
+From then on, **just double-click the icon**. It makes sure Ollama is running, starts the server, and opens the tutor in your browser automatically. To start it from a terminal instead:
+
+```bash
+npm run launch
+```
+
+> Want a custom icon? Drop `scripts/AppIcon.icns` (macOS) or `scripts/AppIcon.ico` (Windows) into the repo before running setup and it will be used automatically. You can re-create the launcher anytime with `npm run app:install` (macOS) or `powershell -ExecutionPolicy Bypass -File scripts\install-windows-shortcut.ps1` (Windows).
+
+The manual steps below are equivalent, if you prefer to run them yourself.
+
+## Setup (manual)
 
 ```bash
 # 1. Install dependencies

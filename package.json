@@ -11,6 +11,9 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/seed.ts",
     "setup": "npm run db:migrate && npm run seed",
+    "bootstrap": "node scripts/setup.mjs",
+    "launch": "node scripts/launch.mjs",
+    "app:install": "node scripts/install-macos-app.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "tsx tests/e2e/run-e2e.ts"

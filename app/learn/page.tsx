@@ -56,6 +56,13 @@ export default function LearnPage() {
   const subject = useMemo(() => data?.subjects.find((s) => s.id === subjectId), [data, subjectId]);
   const topic = useMemo(() => subject?.topics.find((t) => t.id === topicId), [subject, topicId]);
   const topicGaps = useMemo(() => data?.gaps.filter((g) => g.topicId === topicId) ?? [], [data, topicId]);
+  const subjectProgress = useMemo(() => {
+    if (!subject) return null;
+    const total = subject.topics.length;
+    const mastered = subject.topics.filter((t) => t.mastery >= 0.8).length;
+    const started = subject.topics.filter((t) => t.attempts > 0).length;
+    return { total, mastered, started, avg: Math.round((subject.averageMastery ?? 0) * 100) };
+  }, [subject]);
 
   const loadState = useCallback(async () => {
     const res = await fetch("/api/state");
@@ -151,7 +158,31 @@ export default function LearnPage() {
         acc += decoder.decode(value, { stream: true });
         updateLastAssistant(acc);
       }
-      if (mode === "quiz" || mode === "diagnostic") setPendingQuestion(acc);
+    } catch {
+      updateLastAssistant("I couldn't reach the local model. Is Ollama running on the host?");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function askQuiz(kind: "quiz" | "diagnostic") {
+    if (busy || !subjectId || !topicId) return;
+    setBusy(true);
+    setPendingQuestion(null);
+    setMessages((m) => [...m, { role: "assistant", content: "" }]);
+    try {
+      const res = await fetch("/api/quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subjectId, topicId, kind }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.question) {
+        updateLastAssistant(d.error ?? "I couldn't come up with a question — try again.");
+        return;
+      }
+      updateLastAssistant(d.question);
+      setPendingQuestion(d.question);
     } catch {
       updateLastAssistant("I couldn't reach the local model. Is Ollama running on the host?");
     } finally {
@@ -280,6 +311,33 @@ export default function LearnPage() {
             ))}
           </div>
 
+          {subject && subjectProgress && (
+            <div className="mb-4 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-slate-300">Progress</span>
+                <span className="text-slate-400">
+                  {subjectProgress.mastered}/{subjectProgress.total} mastered
+                </span>
+              </div>
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                <div
+                  className="h-full bg-emerald-500 transition-all duration-300"
+                  style={{
+                    width: `${subjectProgress.total ? (subjectProgress.mastered / subjectProgress.total) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+              <div className="mt-1.5 text-[11px] text-slate-500">
+                {subjectProgress.avg}% avg mastery · {subjectProgress.started}/{subjectProgress.total} started
+                {subjectProgress.mastered === subjectProgress.total && subjectProgress.total > 0 ? (
+                  <span className="ml-1 text-emerald-400">· subject complete 🎉</span>
+                ) : (
+                  <> · master a topic by passing its quizzes (≥80%)</>
+                )}
+              </div>
+            </div>
+          )}
+
           {subject && (
             <>
               <div className="mb-2 flex items-center justify-between">
@@ -349,8 +407,8 @@ export default function LearnPage() {
                 <ActionBtn disabled={busy} onClick={() => streamTutor("teach", `Please teach me the next step on "${topic.name}".`)}>
                   Teach me this
                 </ActionBtn>
-                <ActionBtn disabled={busy} onClick={() => streamTutor("quiz")}>Quiz me</ActionBtn>
-                <ActionBtn disabled={busy} onClick={() => streamTutor("diagnostic")}>Diagnostic</ActionBtn>
+                <ActionBtn disabled={busy} onClick={() => askQuiz("quiz")}>Quiz me</ActionBtn>
+                <ActionBtn disabled={busy} onClick={() => askQuiz("diagnostic")}>Diagnostic</ActionBtn>
                 <ActionBtn disabled={busy || topicGaps.length === 0} onClick={() => streamTutor("review")}>
                   Review gaps{topicGaps.length ? ` (${topicGaps.length})` : ""}
                 </ActionBtn>

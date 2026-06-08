@@ -33,3 +33,14 @@ npm-debug.log*
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# generated launchers (created by setup / install scripts)
+/*.app/
+/Adaptive Tutor.app/
+scripts/launch.cmd
+scripts/.macos-run.command
+*.lnk
+
+# generated macOS icon (built from assets/AppIcon.png at install time)
+scripts/AppIcon.icns
+scripts/AppIcon.iconset/
