@@ -65,8 +65,8 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-6xl px-6 py-8">
-      <header className="mb-6 flex items-center justify-between">
+    <div className="mx-auto min-h-screen max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Admin portal</h1>
           <p className="text-sm text-slate-400">View profiles, curate curriculum, and manage the knowledge base.</p>
@@ -119,8 +119,8 @@ function ProfilesTab() {
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-800">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-xl border border-slate-800">
+      <table className="w-full min-w-[680px] text-sm">
         <thead className="bg-slate-900/60 text-left text-xs uppercase tracking-wider text-slate-500">
           <tr>
             <th className="px-4 py-2">Profile</th>

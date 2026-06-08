@@ -51,6 +51,7 @@ export default function LearnPage() {
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [showAddMaterial, setShowAddMaterial] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const subject = useMemo(() => data?.subjects.find((s) => s.id === subjectId), [data, subjectId]);
@@ -103,7 +104,10 @@ export default function LearnPage() {
   }
 
   async function onSelectSubject(sid: string) {
-    if (sid === subjectId) return;
+    if (sid === subjectId) {
+      setNavOpen(false);
+      return;
+    }
     setSubjectId(sid);
     setPendingQuestion(null);
     const s = data?.subjects.find((x) => x.id === sid);
@@ -263,12 +267,23 @@ export default function LearnPage() {
   return (
     <div className="flex h-screen flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-bold">Adaptive Tutor</h1>
+      <header className="flex items-center justify-between gap-2 border-b border-slate-800 px-3 py-3 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <button
+            onClick={() => setNavOpen(true)}
+            className="rounded-lg border border-slate-700 p-1.5 text-slate-300 hover:bg-slate-800 md:hidden"
+            aria-label="Open menu"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <h1 className="truncate text-base font-bold sm:text-lg">Adaptive Tutor</h1>
           <HealthBadge />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <span className="flex items-center gap-2 text-sm">
             <span
               className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white"
@@ -276,7 +291,7 @@ export default function LearnPage() {
             >
               {data.student.name.charAt(0).toUpperCase()}
             </span>
-            {data.student.name}
+            <span className="hidden max-w-[8rem] truncate sm:inline">{data.student.name}</span>
           </span>
           {data.student.isAdmin && (
             <button
@@ -293,12 +308,29 @@ export default function LearnPage() {
       </header>
 
       <div className="flex min-h-0 flex-1">
-        {/* Sidebar */}
-        <aside className="hidden w-80 shrink-0 overflow-y-auto border-r border-slate-800 p-4 md:block">
+        {/* Mobile drawer backdrop */}
+        {navOpen && (
+          <div className="fixed inset-0 z-30 bg-black/60 md:hidden" onClick={() => setNavOpen(false)} aria-hidden />
+        )}
+        {/* Sidebar: overlay drawer on mobile, static column on desktop */}
+        <aside
+          className={`${
+            navOpen ? "translate-x-0" : "-translate-x-full"
+          } fixed inset-y-0 left-0 z-40 w-80 max-w-[85%] transform overflow-y-auto border-r border-slate-800 bg-slate-950 p-4 transition-transform duration-200 md:static md:z-auto md:max-w-none md:translate-x-0 md:shrink-0 md:bg-transparent md:transition-none`}
+        >
+          <div className="mb-3 flex items-center justify-between md:hidden">
+            <span className="text-sm font-semibold text-slate-200">Menu</span>
+            <button
+              onClick={() => setNavOpen(false)}
+              className="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
+            >
+              Close
+            </button>
+          </div>
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Subjects</h2>
             <button
-              onClick={() => setShowAddSubject(true)}
+              onClick={() => { setShowAddSubject(true); setNavOpen(false); }}
               className="text-xs text-indigo-400 hover:text-indigo-300"
               title="Create a new subject"
             >
@@ -353,7 +385,7 @@ export default function LearnPage() {
                   {subject.name} — Topics
                 </h2>
                 <button
-                  onClick={() => setShowAddMaterial(true)}
+                  onClick={() => { setShowAddMaterial(true); setNavOpen(false); }}
                   className="text-xs text-indigo-400 hover:text-indigo-300"
                   title="Upload a PDF to ground this subject"
                 >
@@ -364,7 +396,7 @@ export default function LearnPage() {
                 {subject.topics.map((t) => (
                   <button
                     key={t.id}
-                    onClick={() => { setTopicId(t.id); setPendingQuestion(null); }}
+                    onClick={() => { setTopicId(t.id); setPendingQuestion(null); setNavOpen(false); }}
                     className={`w-full rounded-lg border p-2.5 text-left transition ${
                       t.id === topicId ? "border-indigo-500 bg-indigo-500/10" : "border-slate-800 hover:border-slate-700"
                     }`}

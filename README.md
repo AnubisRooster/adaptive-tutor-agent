@@ -82,6 +82,8 @@ Find the host IP:
 
 On first launch your OS may prompt to allow Node through the firewall — allow it for **private networks**.
 
+The UI is responsive and works on phones and tablets on the same network: the subject/topic sidebar collapses into a tap-to-open menu (☰) on small screens, while PCs and tablets keep the full two-column layout. Ollama only runs on the host, so mobile devices just need a browser.
+
 For a production-style run:
 
 ```bash
