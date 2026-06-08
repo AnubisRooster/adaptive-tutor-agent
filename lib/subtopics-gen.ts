@@ -1,6 +1,6 @@
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { chatOnce } from "@/lib/ollama";
-import { getSubject, getTopic, type Subtopic } from "@/lib/data";
+import { getSubject, getTopic, getTopicSubtopics, setTopicSubtopics, type Subtopic } from "@/lib/data";
 import { retrieveContext, contextBlock } from "@/lib/rag";
 import { SubtopicsSchema } from "@/lib/schemas";
 
@@ -57,4 +57,23 @@ List the sub-areas a student could drill into, as JSON.`;
     list.push({ name, description: s.description.trim().slice(0, 300) });
   }
   return list;
+}
+
+/**
+ * Generate + cache sub-areas for a topic if it doesn't already have them.
+ * Safe to call in the background (e.g. after subject creation or in a batch
+ * pass); errors are swallowed so a single failure doesn't abort the caller.
+ * Returns true if it generated (or already had) subtopics.
+ */
+export async function ensureSubtopicsCached(topicId: string): Promise<boolean> {
+  const topic = getTopic(topicId);
+  if (!topic) return false;
+  if (getTopicSubtopics(topic).length > 0) return true;
+  try {
+    const subs = await generateSubtopics(topicId);
+    setTopicSubtopics(topicId, subs);
+    return true;
+  } catch {
+    return false;
+  }
 }
