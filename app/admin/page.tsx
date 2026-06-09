@@ -29,6 +29,10 @@ type ProfileDetail = {
   messageCount: number;
 };
 
+type ChatMessage = { id: string; role: string; content: string; topicId: string | null; topicName: string | null; createdAt: number };
+type ChatSession = { id: string; subjectId: string; subjectName: string; startedAt: number; lastActiveAt: number; messageCount: number; messages: ChatMessage[] };
+type ProfileChats = { profile: { id: string; name: string }; sessions: ChatSession[] };
+
 type CurriculumTopic = { id: string; name: string; description: string; orderIndex: number; prerequisites: string[]; chunkCount: number };
 type CurriculumSubject = { id: string; name: string; description: string; framing: string; orderIndex: number; chunkCount: number; sourceCount: number; topics: CurriculumTopic[] };
 
@@ -186,6 +190,7 @@ function ProfileDetailView({ detail }: { detail: ProfileDetail }) {
       <div className="text-xs text-slate-400">
         Created {fmtDate(detail.profile.createdAt)} · {detail.sessionCount} sessions · {detail.messageCount} messages
       </div>
+      <ChatHistory studentId={detail.profile.id} sessionCount={detail.sessionCount} messageCount={detail.messageCount} />
       {detail.subjects.length === 0 ? (
         <p className="text-sm text-slate-500">No learning activity yet.</p>
       ) : (
@@ -222,6 +227,119 @@ function ProfileDetailView({ detail }: { detail: ProfileDetail }) {
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+function ChatHistory({ studentId, sessionCount, messageCount }: { studentId: string; sessionCount: number; messageCount: number }) {
+  const [open, setOpen] = useState(false);
+  const [chats, setChats] = useState<ProfileChats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [openSessions, setOpenSessions] = useState<Set<string>>(new Set());
+
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && !chats) {
+      setLoading(true);
+      try {
+        const d = await fetch(`/api/admin/profiles/${studentId}/chats`).then((r) => r.json());
+        setChats(d);
+        // Auto-expand the most recent session for convenience.
+        if (d?.sessions?.[0]) setOpenSessions(new Set([d.sessions[0].id]));
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+  function toggleSession(id: string) {
+    setOpenSessions((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  return (
+    <div className="rounded-lg border border-slate-800">
+      <button
+        onClick={toggle}
+        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-200"
+      >
+        <span>Chat history</span>
+        <span className="flex items-center gap-2 normal-case tracking-normal text-slate-500">
+          {sessionCount} sessions · {messageCount} messages
+          <span className={`transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-slate-800 p-3">
+          {loading ? (
+            <p className="text-sm text-slate-500">Loading transcript…</p>
+          ) : !chats || chats.sessions.length === 0 ? (
+            <p className="text-sm text-slate-500">No chat messages yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {chats.sessions.map((s) => {
+                const expanded = openSessions.has(s.id);
+                return (
+                  <div key={s.id} className="rounded-lg border border-slate-800 bg-slate-950/40">
+                    <button
+                      onClick={() => toggleSession(s.id)}
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-slate-900/40"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className={`text-slate-500 transition-transform ${expanded ? "rotate-90" : ""}`}>›</span>
+                        <span className="font-medium text-slate-200">{s.subjectName}</span>
+                        <span className="text-slate-500">{s.messageCount} messages</span>
+                      </span>
+                      <span className="text-slate-500">{fmtDate(s.lastActiveAt)}</span>
+                    </button>
+                    {expanded && (
+                      <div className="space-y-2 border-t border-slate-800 px-3 py-3">
+                        {s.messages.length === 0 ? (
+                          <p className="text-xs text-slate-600">No messages in this session.</p>
+                        ) : (
+                          s.messages.map((m) => <ChatBubble key={m.id} m={m} />)
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChatBubble({ m }: { m: ChatMessage }) {
+  const isUser = m.role === "user";
+  const isSystem = m.role === "system";
+  if (isSystem) {
+    return (
+      <div className="rounded-md border border-slate-800 bg-slate-900/40 px-2.5 py-1.5 text-[11px] text-slate-500">
+        <span className="font-semibold uppercase tracking-wider">system</span> · {m.content}
+      </div>
+    );
+  }
+  return (
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${
+          isUser ? "bg-indigo-600/20 text-indigo-100" : "bg-slate-800/70 text-slate-200"
+        }`}
+      >
+        <div className="mb-1 flex items-center gap-2 text-[10px] text-slate-400">
+          <span className="font-semibold uppercase tracking-wider">{isUser ? "student" : "tutor"}</span>
+          {m.topicName && <span className="rounded bg-slate-700/60 px-1.5 py-0.5">{m.topicName}</span>}
+          <span>{fmtDate(m.createdAt)}</span>
+        </div>
+        <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
+      </div>
     </div>
   );
 }

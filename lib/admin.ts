@@ -149,6 +149,89 @@ export function adminProfileDetail(studentId: string): AdminProfileDetail | null
   };
 }
 
+export type AdminChatMessage = {
+  id: string;
+  role: string;
+  content: string;
+  topicId: string | null;
+  topicName: string | null;
+  createdAt: number;
+};
+export type AdminChatSession = {
+  id: string;
+  subjectId: string;
+  subjectName: string;
+  startedAt: number;
+  lastActiveAt: number;
+  messageCount: number;
+  messages: AdminChatMessage[];
+};
+export type AdminProfileChats = {
+  profile: { id: string; name: string };
+  sessions: AdminChatSession[];
+};
+
+/** Full chat transcript for one profile, grouped by session (newest first). */
+export function adminProfileChats(studentId: string): AdminProfileChats | null {
+  const student = db.select().from(students).where(eq(students.id, studentId)).get();
+  if (!student) return null;
+
+  const subjectName = new Map(db.select().from(subjects).all().map((s) => [s.id, s.name]));
+  const topicName = new Map(getAllTopics().map((t) => [t.id, t.name]));
+
+  const msgRows = db.select().from(messages).where(eq(messages.studentId, studentId)).all();
+  const msgsBySession = new Map<string, typeof msgRows>();
+  for (const m of msgRows) {
+    const list = msgsBySession.get(m.sessionId) ?? [];
+    list.push(m);
+    msgsBySession.set(m.sessionId, list);
+  }
+
+  const sessionRows = db.select().from(sessions).where(eq(sessions.studentId, studentId)).all();
+  // Include any orphan sessions referenced only by messages (defensive).
+  const knownSessionIds = new Set(sessionRows.map((s) => s.id));
+  const orphanSessionIds = [...msgsBySession.keys()].filter((id) => !knownSessionIds.has(id));
+
+  const toMessage = (m: (typeof msgRows)[number]): AdminChatMessage => ({
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    topicId: m.topicId ?? null,
+    topicName: m.topicId ? topicName.get(m.topicId) ?? null : null,
+    createdAt: m.createdAt,
+  });
+
+  const sessionsOut: AdminChatSession[] = sessionRows.map((s) => {
+    const msgs = (msgsBySession.get(s.id) ?? []).sort((a, b) => a.createdAt - b.createdAt);
+    return {
+      id: s.id,
+      subjectId: s.subjectId,
+      subjectName: subjectName.get(s.subjectId) ?? s.subjectId,
+      startedAt: s.startedAt,
+      lastActiveAt: s.lastActiveAt,
+      messageCount: msgs.length,
+      messages: msgs.map(toMessage),
+    };
+  });
+
+  for (const sid of orphanSessionIds) {
+    const msgs = (msgsBySession.get(sid) ?? []).sort((a, b) => a.createdAt - b.createdAt);
+    if (msgs.length === 0) continue;
+    sessionsOut.push({
+      id: sid,
+      subjectId: "",
+      subjectName: "(unknown subject)",
+      startedAt: msgs[0].createdAt,
+      lastActiveAt: msgs[msgs.length - 1].createdAt,
+      messageCount: msgs.length,
+      messages: msgs.map(toMessage),
+    });
+  }
+
+  sessionsOut.sort((a, b) => b.lastActiveAt - a.lastActiveAt);
+  return { profile: { id: student.id, name: student.name }, sessions: sessionsOut };
+}
+
 export type AdminCurriculumSubject = {
   id: string;
   name: string;
