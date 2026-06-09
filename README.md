@@ -135,7 +135,11 @@ within a topic.
 
 Subjects, topics, and the knowledge base are all stored in the database, so you can grow the curriculum at runtime from the learning UI - no code changes or restarts.
 
-- **Add a subject:** in the sidebar, click **+ Add** next to "Subjects", enter a name (e.g. `Chemistry` - independent of the built-in `Organic Chemistry`), and optionally paste a chapter list/syllabus. The local model drafts a topic path with prerequisites that you can edit (rename, add/remove topics, set prerequisites) before saving. The new subject is shared with all profiles.
+- **Add a subject:** in the sidebar, click **+ Add** next to "Subjects", enter a name (e.g. `Chemistry` - independent of the built-in `Organic Chemistry`). Then pick how to build it:
+  - **Draft topics with AI** — optionally paste a chapter list/syllabus and the local model drafts a topic path with prerequisites that you can edit (rename, add/remove topics, set prerequisites) before saving.
+  - **Import chapter PDFs** — add one PDF per chapter; each becomes a topic (taught in order, each building on the previous) and its PDF is ingested as that topic's material. This creates the subject, all topics, and all material in one step. Topic names auto-fill from the PDF filenames and stay editable. PDFs upload immediately and embed in the background, so you can start learning while they finish.
+
+  Either way the new subject is shared with all profiles.
 - **Teach it new knowledge:** with a subject selected, click **+ Material** above the topic list. You can add knowledge three ways (optionally attached to a specific topic):
   - **PDF** — upload a textbook, notes, or paper.
   - **Paste text** — drop in notes, definitions, or an article directly.

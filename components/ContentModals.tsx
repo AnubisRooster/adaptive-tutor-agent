@@ -34,6 +34,7 @@ type Draft = {
   subject: { name: string; description: string; framing: string };
   topics: DraftTopic[];
 };
+type Chapter = { key: string; name: string; description: string; file: File | null };
 
 export function AddSubjectModal({
   onClose,
@@ -43,6 +44,7 @@ export function AddSubjectModal({
   onCreated: (subjectId: string) => void;
 }) {
   const [step, setStep] = useState<"input" | "edit">("input");
+  const [creationMode, setCreationMode] = useState<"ai" | "chapters">("ai");
   const [name, setName] = useState("");
   const [sampleText, setSampleText] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -50,6 +52,107 @@ export function AddSubjectModal({
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ chars: number; topics: number } | null>(null);
   const [elapsed, setElapsed] = useState(0);
+
+  // "Import chapter PDFs" mode.
+  const [description, setDescription] = useState("");
+  const [framing, setFraming] = useState("");
+  const [chapters, setChapters] = useState<Chapter[]>([
+    { key: crypto.randomUUID(), name: "", description: "", file: null },
+  ]);
+  const [importProgress, setImportProgress] = useState<{ done: number; total: number; label: string } | null>(null);
+
+  function prettifyFileName(fileName: string): string {
+    return fileName
+      .replace(/\.pdf$/i, "")
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  function updateChapter(key: string, patch: Partial<Chapter>) {
+    setChapters((cs) => cs.map((c) => (c.key === key ? { ...c, ...patch } : c)));
+  }
+  function onChapterFile(key: string, file: File | null) {
+    setChapters((cs) =>
+      cs.map((c) =>
+        c.key === key
+          ? { ...c, file, name: c.name.trim() ? c.name : file ? prettifyFileName(file.name) : c.name }
+          : c
+      )
+    );
+  }
+  function addChapter() {
+    setChapters((cs) => [...cs, { key: crypto.randomUUID(), name: "", description: "", file: null }]);
+  }
+  function removeChapter(key: string) {
+    setChapters((cs) => (cs.length > 1 ? cs.filter((c) => c.key !== key) : cs));
+  }
+
+  async function createFromChapters() {
+    if (name.trim().length < 2) {
+      setError("Enter a subject name.");
+      return;
+    }
+    const valid = chapters.filter((c) => c.file && c.name.trim());
+    if (valid.length === 0) {
+      setError("Add at least one chapter with a PDF and a topic name.");
+      return;
+    }
+    const oversized = valid.find((c) => c.file && c.file.size > 50 * 1024 * 1024);
+    if (oversized) {
+      setError(`"${oversized.name}" exceeds the 50 MB limit.`);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setImportProgress({ done: 0, total: valid.length, label: "Creating subject…" });
+    try {
+      // 1) Create the subject + one topic per chapter (sequential prerequisites).
+      const res = await fetch("/api/subjects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim(),
+          framing: framing.trim(),
+          topics: valid.map((c, i) => ({
+            name: c.name.trim(),
+            description: c.description.trim(),
+            prerequisiteIndexes: i > 0 ? [i - 1] : [],
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Could not create the subject.");
+        setImportProgress(null);
+        return;
+      }
+      const createdTopics: { id: string; orderIndex: number }[] = data.topics ?? [];
+      // 2) Upload each chapter PDF to its matching topic (background ingestion).
+      for (let i = 0; i < valid.length; i++) {
+        const topicId = createdTopics[i]?.id;
+        setImportProgress({ done: i, total: valid.length, label: `Uploading ${valid[i].name}…` });
+        if (!topicId || !valid[i].file) continue;
+        const fd = new FormData();
+        fd.append("subjectId", data.subject.id);
+        fd.append("topicId", topicId);
+        fd.append("file", valid[i].file as File);
+        try {
+          await fetch("/api/ingest", { method: "POST", body: fd });
+        } catch {
+          /* leave it; the source row will show an error and can be retried */
+        }
+        setImportProgress({ done: i + 1, total: valid.length, label: `Uploaded ${valid[i].name}` });
+      }
+      onCreated(data.subject.id as string);
+    } catch {
+      setError("Could not create the subject from chapters.");
+    } finally {
+      setBusy(false);
+      setImportProgress(null);
+    }
+  }
 
   async function makeDraft() {
     if (name.trim().length < 2) {
@@ -190,22 +293,59 @@ export function AddSubjectModal({
   }
 
   return (
-    <Modal onClose={onClose} wide={step === "edit"}>
+    <Modal onClose={onClose} wide={step === "edit" || creationMode === "chapters"}>
       {step === "input" ? (
         <>
-          <h3 className="mb-1 text-lg font-semibold">Add a subject</h3>
-          <p className="mb-4 text-sm text-slate-400">
-            Name a subject and the tutor will draft a topic path you can edit. (e.g. &quot;Chemistry&quot;,
-            &quot;Spanish&quot;, &quot;Microeconomics&quot;.)
-          </p>
+          <h3 className="mb-3 text-lg font-semibold">Add a subject</h3>
           <label className="mb-1 block text-sm text-slate-400">Subject name</label>
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Chemistry"
-            className="mb-4 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 outline-none focus:border-indigo-500"
+            className="mb-3 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 outline-none focus:border-indigo-500"
           />
+
+          <div className="mb-4 flex gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1 text-sm">
+            <button
+              onClick={() => { setCreationMode("ai"); setError(null); }}
+              className={`flex-1 rounded-md px-3 py-1.5 transition-colors ${
+                creationMode === "ai" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Draft topics with AI
+            </button>
+            <button
+              onClick={() => { setCreationMode("chapters"); setError(null); }}
+              className={`flex-1 rounded-md px-3 py-1.5 transition-colors ${
+                creationMode === "chapters" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Import chapter PDFs
+            </button>
+          </div>
+
+          {creationMode === "chapters" ? (
+            <ChapterBuilder
+              description={description}
+              setDescription={setDescription}
+              framing={framing}
+              setFraming={setFraming}
+              chapters={chapters}
+              busy={busy}
+              error={error}
+              importProgress={importProgress}
+              onChapterFile={onChapterFile}
+              updateChapter={updateChapter}
+              addChapter={addChapter}
+              removeChapter={removeChapter}
+              onSubmit={createFromChapters}
+            />
+          ) : (
+          <>
+          <p className="mb-3 text-sm text-slate-400">
+            The tutor will draft a topic path you can edit before saving.
+          </p>
           <label className="mb-1 block text-sm text-slate-400">
             Optional: paste a chapter list or description to ground the topics
           </label>
@@ -257,6 +397,8 @@ export function AddSubjectModal({
               {busy ? "Drafting…" : "Draft topics"}
             </button>
           </div>
+          </>
+          )}
         </>
       ) : (
         draft && (
@@ -365,6 +507,139 @@ export function AddSubjectModal({
         )
       )}
     </Modal>
+  );
+}
+
+function ChapterBuilder({
+  description,
+  setDescription,
+  framing,
+  setFraming,
+  chapters,
+  busy,
+  error,
+  importProgress,
+  onChapterFile,
+  updateChapter,
+  addChapter,
+  removeChapter,
+  onSubmit,
+}: {
+  description: string;
+  setDescription: (v: string) => void;
+  framing: string;
+  setFraming: (v: string) => void;
+  chapters: Chapter[];
+  busy: boolean;
+  error: string | null;
+  importProgress: { done: number; total: number; label: string } | null;
+  onChapterFile: (key: string, file: File | null) => void;
+  updateChapter: (key: string, patch: Partial<Chapter>) => void;
+  addChapter: () => void;
+  removeChapter: (key: string) => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <>
+      <p className="mb-3 text-sm text-slate-400">
+        Add one PDF per chapter. Each becomes a topic, and its PDF is ingested as that topic&apos;s material.
+        Chapters are taught in order (each builds on the previous).
+      </p>
+
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        <input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="One-line subject description (optional)"
+          className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+        />
+        <input
+          value={framing}
+          onChange={(e) => setFraming(e.target.value)}
+          placeholder="How should the tutor teach it? (optional)"
+          className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+        />
+      </div>
+
+      <div className="mb-2 flex items-center justify-between">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Chapters ({chapters.length})</h4>
+        <button onClick={addChapter} disabled={busy} className="text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50">
+          + Add chapter
+        </button>
+      </div>
+
+      <ol className="space-y-2">
+        {chapters.map((c, i) => (
+          <li key={c.key} className="rounded-lg border border-slate-800 p-3">
+            <div className="flex items-start gap-2">
+              <span className="mt-2 text-xs text-slate-500">{i + 1}.</span>
+              <div className="flex-1 space-y-2">
+                <input
+                  value={c.name}
+                  onChange={(e) => updateChapter(c.key, { name: e.target.value })}
+                  placeholder="Topic name (auto-filled from the PDF name)"
+                  className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm outline-none focus:border-indigo-500"
+                />
+                <input
+                  value={c.description}
+                  onChange={(e) => updateChapter(c.key, { description: e.target.value })}
+                  placeholder="Short description (optional)"
+                  className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-300 outline-none focus:border-indigo-500"
+                />
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={(e) => onChapterFile(c.key, e.target.files?.[0] ?? null)}
+                  className="block w-full text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-slate-200 hover:file:bg-slate-700"
+                />
+                {c.file && <p className="text-[11px] text-emerald-400">{c.file.name}</p>}
+              </div>
+              <button
+                onClick={() => removeChapter(c.key)}
+                disabled={busy || chapters.length <= 1}
+                className="mt-1 text-slate-500 hover:text-rose-400 disabled:opacity-30"
+                title="Remove chapter"
+              >
+                ✕
+              </button>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      {error && <p className="mt-3 text-sm text-rose-400">{error}</p>}
+
+      {importProgress && (
+        <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+          <div className="mb-1.5 flex items-center justify-between text-xs text-slate-300">
+            <span className="flex items-center gap-2">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-indigo-400" />
+              {importProgress.label}
+            </span>
+            <span className="text-slate-400">{importProgress.done}/{importProgress.total}</span>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+            <div
+              className="h-full bg-indigo-500 transition-all duration-300"
+              style={{ width: `${importProgress.total ? (importProgress.done / importProgress.total) * 100 : 0}%` }}
+            />
+          </div>
+          <p className="mt-1.5 text-[11px] text-slate-500">
+            PDFs are uploaded then embedded in the background — you can start learning while they finish.
+          </p>
+        </div>
+      )}
+
+      <div className="mt-4 flex justify-end">
+        <button
+          onClick={onSubmit}
+          disabled={busy}
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500 disabled:opacity-50"
+        >
+          {busy ? "Creating…" : "Create subject & import"}
+        </button>
+      </div>
+    </>
   );
 }
 

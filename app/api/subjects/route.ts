@@ -82,5 +82,8 @@ export async function POST(req: Request) {
   })();
 
   const subject = getSubject(subjectId);
-  return NextResponse.json({ subject }, { status: 201 });
+  // Return the created topic ids (in order) so the client can attach material
+  // (e.g. one chapter PDF per topic) right after creation.
+  const createdTopics = topicIds.map((id, i) => ({ id, name: topics[i].name, orderIndex: i }));
+  return NextResponse.json({ subject, topics: createdTopics }, { status: 201 });
 }
