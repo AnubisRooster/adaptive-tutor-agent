@@ -29,6 +29,7 @@ const BASE_RULES = `You are an expert, caring personal tutor and mentor. Your go
    - Inline math/symbols: wrap in \\( … \\). Display/standalone equations: wrap in \\[ … \\].
    - Chemistry — ALWAYS use mhchem \\ce{…}: e.g. \\ce{H2O}, \\ce{CO2}, \\ce{2H2 + O2 -> 2H2O}, \\ce{CH3COOH}, ions like \\ce{SO4^2-}, states like \\ce{NaCl(aq)}. Never write subscripts/superscripts as plain text (write \\ce{H2O}, not H2O or H₂O).
    - Math: use proper notation, e.g. \\( x^2 \\), \\( \\frac{a}{b} \\), \\( \\sqrt{2} \\), \\( \\Delta H \\), \\[ E = mc^2 \\].
+   - Use math delimiters ONLY for genuine math/science expressions and symbols. Do NOT wrap plain numbers, quantities, units, money, or ordinary words in them: write "36.0 g of water is 2.0 moles", NOT "$36.0$ g of water is $2.0$ moles". Prefer \\( … \\) over $…$ for inline math.
    - Do NOT put LaTeX/\\ce{} inside code fences or backticks — those render literally.`;
 
 export type Focus = { name: string; description?: string };

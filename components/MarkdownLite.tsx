@@ -69,13 +69,15 @@ function tokenizeMath(input: string): MathToken[] {
       }
     }
 
-    // Inline $…$ — require a closing $ on the same line and non-empty content that
-    // isn't obviously currency (e.g. "$5" or "$5 and $10").
+    // Inline $…$ — require a closing $ on the same line with non-empty content and
+    // no space adjacent to the delimiters. This renders closed pairs like $36.0$ or
+    // $x^2$ as math (so the $ signs disappear) while leaving prose currency such as
+    // "$5" (no closing $) or "$5 and $10" (space inside) untouched.
     if (input[i] === "$") {
       const end = input.indexOf("$", i + 1);
       if (end !== -1) {
         const inner = input.slice(i + 1, end);
-        const looksLikeMath = inner.length > 0 && !inner.includes("\n") && !/^\s|\s$/.test(inner) && !/^\d[\d.,]*$/.test(inner);
+        const looksLikeMath = inner.length > 0 && !inner.includes("\n") && !/^\s|\s$/.test(inner);
         if (looksLikeMath && closeOf("$", "$", false)) continue;
       }
     }
