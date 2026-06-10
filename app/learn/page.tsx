@@ -664,9 +664,20 @@ export default function LearnPage() {
                 {pendingQuestion ? "Submit answer" : "Send"}
               </button>
             </div>
-            {pendingQuestion && (
+            {/[\\][([]|[\\]ce\{|[\\]pu\{|\$/.test(input) && (
+              <div className="mx-auto mt-2 max-w-3xl rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2">
+                <div className="mb-1 text-[10px] uppercase tracking-wider text-slate-500">Preview</div>
+                <MarkdownLite content={input} />
+              </div>
+            )}
+            {pendingQuestion ? (
               <p className="mx-auto mt-1.5 max-w-3xl text-xs text-amber-300/80">
                 Answering a quiz question — your response will be graded and update your mastery.
+              </p>
+            ) : (
+              <p className="mx-auto mt-1.5 max-w-3xl text-[11px] text-slate-500">
+                Tip: write chemistry as <code className="rounded bg-slate-800 px-1 text-amber-200">{"\\ce{2H2 + O2 -> 2H2O}"}</code> and math as{" "}
+                <code className="rounded bg-slate-800 px-1 text-amber-200">{"\\( x^2 \\)"}</code> or <code className="rounded bg-slate-800 px-1 text-amber-200">{"\\[ E=mc^2 \\]"}</code>.
               </p>
             )}
           </div>
@@ -720,7 +731,7 @@ function Bubble({ msg, color }: { msg: ChatMsg; color: string }) {
         }`}
         style={isUser ? { backgroundColor: color } : undefined}
       >
-        {isUser ? <span className="whitespace-pre-wrap">{msg.content}</span> : <MarkdownLite content={msg.content || "…"} />}
+        <MarkdownLite content={msg.content || "…"} />
         {msg.badge && (
           <div className="mt-3 border-t border-slate-700/60 pt-2 text-xs text-slate-300">
             <span className="font-semibold">Score: {(msg.badge.score * 100).toFixed(0)}%</span>

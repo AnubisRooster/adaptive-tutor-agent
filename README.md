@@ -165,6 +165,15 @@ PDFs are parsed with [`unpdf`](https://www.npmjs.com/package/unpdf) (pure JS, no
 
 > Embedding a full textbook is many sequential calls to the embedding model, so ingestion runs in the background and the UI polls for status. Retrieval scores chunk similarity in memory, which is fine for a handful of textbooks per subject; for very large libraries you'd add a vector index.
 
+## Math & chemistry notation
+
+Tutor and student messages render mathematical and scientific notation with [KaTeX](https://katex.org/) plus the [`mhchem`](https://mhchem.github.io/MathJax-mhchem/) extension, so equations, formulas, and element symbols display properly (no more garbled `H2O`):
+
+- **Math** — inline `\( … \)`, display `\[ … \]` (also `$…$` / `$$…$$`). E.g. `\( x^2 \)`, `\[ E = mc^2 \]`, `\( \frac{a}{b} \)`, `\( \Delta H \)`.
+- **Chemistry** — `\ce{ … }`: `\ce{H2O}`, `\ce{2H2 + O2 -> 2H2O}`, ions `\ce{SO4^2-}`, states `\ce{NaCl(aq)}`, equilibria `\ce{N2 + 3H2 <=> 2NH3}`.
+
+The tutor is instructed to emit all math/chemistry in this notation, so it renders automatically. When **you** type any of these delimiters in the composer, a **live preview** appears above the tip line so you can confirm the equation before sending. Works for any math/science subject (Chemistry, Physics, Biology, etc.).
+
 ## Configuration (`.env`)
 
 | Variable        | Default                  | Purpose                                  |
@@ -179,7 +188,7 @@ PDFs are parsed with [`unpdf`](https://www.npmjs.com/package/unpdf) (pure JS, no
 
 ```
 app/            Next.js routes + UI (profile landing, /learn tutor, /api/*)
-components/     Client UI (MarkdownLite, HealthBadge, ContentModals)
+components/     Client UI (MarkdownLite — markdown + KaTeX/mhchem math, HealthBadge, ContentModals)
 lib/            ollama client, prompts, adaptive engine, RAG, orchestrator, data access,
                 chunk (shared splitter), pdf (text extraction), html (URL fetch/extract),
                 robots (robots.txt), crawl (bounded site crawler), ingest, curriculum-gen,
