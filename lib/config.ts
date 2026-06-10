@@ -44,6 +44,17 @@ export function embedModel(): string {
   return process.env.EMBED_MODEL || "nomic-embed-text";
 }
 
+/**
+ * Context window (in tokens) requested from Ollama. Ollama defaults to a small
+ * window (often 4096); when a RAG-grounded prompt exceeds it, the input is
+ * silently truncated from the front, cutting off instructions/schema and
+ * producing degenerate output. We request a larger window by default.
+ */
+export function numCtx(): number {
+  const raw = Number(process.env.OLLAMA_NUM_CTX);
+  return Number.isFinite(raw) && raw > 0 ? raw : 8192;
+}
+
 export function databasePath(): string {
   return process.env.DATABASE_PATH || path.resolve(process.cwd(), "data", "tutor.db");
 }

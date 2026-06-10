@@ -68,9 +68,29 @@ export async function retrieveContext(
   return chunks.slice(0, k).map((c) => ({ text: c.text, source: c.source, topicId: c.topicId, score: 0 }));
 }
 
-export function contextBlock(chunks: RetrievedChunk[]): string {
+/**
+ * Render retrieved chunks into a prompt context block, bounded to `maxChars`.
+ * Large ingested sources (e.g. full textbook chunks) can otherwise produce a
+ * context big enough to overflow the model's window, which silently truncates
+ * the prompt and breaks structured output. We add whole chunks until the budget
+ * is reached, truncating the final one if needed.
+ */
+export function contextBlock(chunks: RetrievedChunk[], maxChars = 6000): string {
   if (chunks.length === 0) return "";
-  return chunks
-    .map((c, i) => `[${i + 1}] ${c.text}${c.source ? ` (source: ${c.source})` : ""}`)
-    .join("\n\n");
+  const parts: string[] = [];
+  let used = 0;
+  for (let i = 0; i < chunks.length; i++) {
+    const c = chunks[i];
+    const suffix = c.source ? ` (source: ${c.source})` : "";
+    let body = c.text;
+    const overhead = `[${i + 1}] `.length + suffix.length;
+    const remaining = maxChars - used - overhead;
+    if (remaining <= 0) break;
+    if (body.length > remaining) body = body.slice(0, remaining).trimEnd() + "…";
+    const entry = `[${i + 1}] ${body}${suffix}`;
+    parts.push(entry);
+    used += entry.length + 2; // account for the "\n\n" join
+    if (used >= maxChars) break;
+  }
+  return parts.join("\n\n");
 }

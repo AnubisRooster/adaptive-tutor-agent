@@ -1,5 +1,5 @@
 import { Ollama } from "ollama";
-import { loadEnv, ollamaHost, tutorModel, embedModel } from "./config";
+import { loadEnv, ollamaHost, tutorModel, embedModel, numCtx } from "./config";
 
 loadEnv();
 
@@ -67,7 +67,7 @@ export async function* streamChat(
     model: tutorModel(),
     messages,
     stream: true,
-    options: { temperature: opts.temperature ?? 0.6 },
+    options: { temperature: opts.temperature ?? 0.6, num_ctx: numCtx() },
   });
   for await (const part of stream) {
     if (part.message?.content) yield part.message.content;
@@ -88,7 +88,7 @@ export async function* streamStructured(
     messages,
     stream: true,
     format: opts.format,
-    options: { temperature: opts.temperature ?? 0.3 },
+    options: { temperature: opts.temperature ?? 0.3, num_ctx: numCtx() },
   });
   for await (const part of stream) {
     if (part.message?.content) yield part.message.content;
@@ -105,7 +105,7 @@ export async function chatOnce(
     messages,
     stream: false,
     format: opts.format,
-    options: { temperature: opts.temperature ?? 0.6 },
+    options: { temperature: opts.temperature ?? 0.6, num_ctx: numCtx() },
   });
   return res.message.content;
 }

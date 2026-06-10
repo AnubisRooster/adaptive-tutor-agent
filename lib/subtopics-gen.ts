@@ -6,6 +6,62 @@ import { SubtopicsSchema } from "@/lib/schemas";
 
 const subtopicsFormat = zodToJsonSchema(SubtopicsSchema) as object;
 
+// Remove markdown code fences (```json ... ```) that some models wrap JSON in,
+// even when there is surrounding prose. Returns the inner text trimmed.
+function stripCodeFences(text: string): string {
+  let t = text.trim();
+  const open = t.match(/```[a-zA-Z0-9]*\s*/);
+  if (open) {
+    t = t.slice((open.index ?? 0) + open[0].length);
+    const close = t.lastIndexOf("```");
+    if (close >= 0) t = t.slice(0, close);
+  }
+  return t.trim();
+}
+
+// Scan for the first balanced top-level JSON object, ignoring braces that occur
+// inside string literals. Handles responses with leading/trailing prose.
+function extractFirstJsonObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+function parseStructuredJson(raw: string): unknown {
+  const cleaned = stripCodeFences(raw);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Fall through to balanced-brace extraction.
+  }
+
+  const candidate = extractFirstJsonObject(cleaned) ?? extractFirstJsonObject(raw);
+  if (candidate) {
+    return JSON.parse(candidate);
+  }
+
+  throw new Error("The model returned invalid JSON.");
+}
+
 const SYSTEM = `You design the sub-structure of a learning topic for an adaptive tutor.
 Given a subject and one of its topics, list the distinct sub-areas, themes, or
 key questions a student could drill into within that topic. Order them roughly
@@ -34,17 +90,28 @@ Topic: ${topic.name} — ${topic.description}${ctxLine}
 
 List the sub-areas a student could drill into, as JSON.`;
 
-  const raw = await chatOnce(
-    [
-      { role: "system", content: SYSTEM },
-      { role: "user", content: user },
-    ],
-    { temperature: 0.4, format: subtopicsFormat }
-  );
+  // Small models occasionally emit prose or malformed JSON; retry once before
+  // giving up. Lower the temperature on the retry to favor compliant output.
+  let parsed: ReturnType<typeof SubtopicsSchema.safeParse> | null = null;
+  let lastRaw = "";
+  for (let attempt = 0; attempt < 2 && (!parsed || !parsed.success); attempt++) {
+    lastRaw = await chatOnce(
+      [
+        { role: "system", content: SYSTEM },
+        { role: "user", content: user },
+      ],
+      { temperature: attempt === 0 ? 0.4 : 0.1, format: subtopicsFormat }
+    );
+    try {
+      parsed = SubtopicsSchema.safeParse(parseStructuredJson(lastRaw));
+    } catch {
+      parsed = null;
+    }
+  }
 
-  const parsed = SubtopicsSchema.safeParse(JSON.parse(raw));
-  if (!parsed.success || parsed.data.subtopics.length === 0) {
-    throw new Error("The model did not return usable sub-areas. Try again.");
+  if (!parsed || !parsed.success || parsed.data.subtopics.length === 0) {
+    console.error("[subtopics] failed to parse model output:", JSON.stringify(lastRaw).slice(0, 600));
+    throw new Error("The model returned invalid JSON.");
   }
   // De-dupe by name and clamp lengths.
   const seen = new Set<string>();
