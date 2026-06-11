@@ -8,7 +8,9 @@ import "katex/dist/katex.min.css";
 // A tiny, dependency-light markdown renderer: fenced code blocks, bullet/numbered
 // lists, headings, inline `code`, **bold**, and math/chemistry via KaTeX (with the
 // mhchem extension). Math is written with \( \) inline, \[ \] display, $…$ / $$…$$,
-// or bare \ce{…} for chemistry. Builds React nodes (KaTeX HTML is sanitized output).
+// or bare \ce{…} for chemistry.
+
+// ── Render helpers ─────────────────────────────────────────────────────────
 
 function mathHtml(tex: string, display: boolean): string {
   try {
@@ -16,25 +18,53 @@ function mathHtml(tex: string, display: boolean): string {
       displayMode: display,
       throwOnError: false,
       strict: "ignore",
-      output: "htmlAndMathml",
+      // HTML-only: the MathML copy KaTeX emits with "htmlAndMathml" is an
+      // absolutely-positioned element that escapes ancestor overflow:hidden
+      // (no positioned ancestor in the chat bubbles), inflating page height.
+      output: "html",
     });
   } catch {
     return "";
   }
 }
 
+// ── normalizeMath ───────────────────────────────────────────────────────────
+// The model sometimes double-wraps math: $\( … \)$ or $\[ … \]$. Strip the
+// outer $ so KaTeX only sees the real delimiters. Also cleans up the common
+// mis-use of $\text{X}$ for plain element labels.
+function normalizeMath(input: string): string {
+  let out = input;
+  // $\( … \)$ → \( … \)  (double-wrapped inline)
+  out = out.replace(/\$\\\(([\s\S]*?)\\\)\$/g, "\\($1\\)");
+  // $\[ … \]$ → \[ … \]  (double-wrapped display)
+  out = out.replace(/\$\\\[([\s\S]*?)\\\]\$/g, "\\[$1\\]");
+  // $\ce{…}$ → \ce{…}
+  out = out.replace(/\$(\\ce\{[\s\S]*?\})\$/g, "$1");
+  // $\pu{…}$ → \pu{…}
+  out = out.replace(/\$(\\pu\{[\s\S]*?\})\$/g, "$1");
+  // $\text{X}$ → X  (plain-text label wrapped in unnecessary math)
+  out = out.replace(/\$\\text\{([^}]*)\}\$/g, "$1");
+  // $ ext{X}$  → X  (\t was decoded as a tab; the backslash+t got mangled)
+  // Covers: "$<tab>ext{X}$" or "$ ext{X}$" (space-before-ext variant)
+  out = out.replace(/\$[\t ]ext\{([^}]*)\}\$/g, "$1");
+  return out;
+}
+
+// ── tokenizeMath ────────────────────────────────────────────────────────────
+// Split a string into plain-text and math tokens. Precedence (highest first):
+//   $$…$$, \[…\] (display); \(…\), $…$ (inline); balanced \ce{…}, \pu{…}.
 type MathToken = { type: "text"; value: string } | { type: "math"; value: string; display: boolean };
 
-// Split a string into plain-text and math tokens. Recognizes (in priority order):
-// $$…$$, \[…\] (display); \(…\), $…$ (inline); and balanced \ce{…} (inline).
 function tokenizeMath(input: string): MathToken[] {
   const tokens: MathToken[] = [];
   let buf = "";
   let i = 0;
+
   const flush = () => {
     if (buf) tokens.push({ type: "text", value: buf });
     buf = "";
   };
+
   const closeOf = (open: string, close: string, display: boolean): boolean => {
     const end = input.indexOf(close, i + open.length);
     if (end === -1) return false;
@@ -69,15 +99,14 @@ function tokenizeMath(input: string): MathToken[] {
       }
     }
 
-    // Inline $…$ — require a closing $ on the same line with non-empty content and
-    // no space adjacent to the delimiters. This renders closed pairs like $36.0$ or
-    // $x^2$ as math (so the $ signs disappear) while leaving prose currency such as
-    // "$5" (no closing $) or "$5 and $10" (space inside) untouched.
+    // Inline $…$ — require a closing $ on the same line with non-empty content
+    // and no space adjacent to the delimiters.
     if (input[i] === "$") {
       const end = input.indexOf("$", i + 1);
       if (end !== -1) {
         const inner = input.slice(i + 1, end);
-        const looksLikeMath = inner.length > 0 && !inner.includes("\n") && !/^\s|\s$/.test(inner);
+        const looksLikeMath =
+          inner.length > 0 && !inner.includes("\n") && !/^\s|\s$/.test(inner);
         if (looksLikeMath && closeOf("$", "$", false)) continue;
       }
     }
@@ -89,47 +118,73 @@ function tokenizeMath(input: string): MathToken[] {
   return tokens;
 }
 
-function renderInline(text: string, keyBase: string): React.ReactNode[] {
-  const nodes: React.ReactNode[] = [];
-  tokenizeMath(text).forEach((tok, ti) => {
+// ── renderMath: convert tokenizeMath tokens to React nodes ──────────────────
+function renderMathTokens(tokens: MathToken[], keyBase: string): React.ReactNode[] {
+  return tokens.flatMap((tok, ti) => {
     if (tok.type === "math") {
       const html = mathHtml(tok.value, tok.display);
       if (html) {
-        nodes.push(
+        return [
           <span
             key={`${keyBase}-m${ti}`}
             className={tok.display ? "katex-block" : ""}
             dangerouslySetInnerHTML={{ __html: html }}
-          />
-        );
-      } else {
-        nodes.push(<code key={`${keyBase}-mf${ti}`} className="inline">{tok.value}</code>);
+          />,
+        ];
       }
-      return;
+      return [<code key={`${keyBase}-mf${ti}`} className="inline">{tok.value}</code>];
     }
-    // Plain text: render inline `code` then **bold**.
-    const parts = tok.value.split(/(`[^`]+`)/g);
-    parts.forEach((part, i) => {
-      if (part.startsWith("`") && part.endsWith("`") && part.length > 1) {
-        nodes.push(
-          <code className="inline" key={`${keyBase}-${ti}-c${i}`}>
-            {part.slice(1, -1)}
-          </code>
-        );
-        return;
-      }
-      const boldParts = part.split(/(\*\*[^*]+\*\*)/g);
-      boldParts.forEach((bp, j) => {
-        if (bp.startsWith("**") && bp.endsWith("**") && bp.length > 2) {
-          nodes.push(<strong key={`${keyBase}-${ti}-b${i}-${j}`}>{bp.slice(2, -2)}</strong>);
-        } else if (bp) {
-          nodes.push(<React.Fragment key={`${keyBase}-${ti}-t${i}-${j}`}>{bp}</React.Fragment>);
-        }
-      });
-    });
+    return tok.value ? [<React.Fragment key={`${keyBase}-t${ti}`}>{tok.value}</React.Fragment>] : [];
+  });
+}
+
+// ── renderSegment: process a plain-text segment (no bold/code) through math ─
+function renderSegment(text: string, keyBase: string): React.ReactNode[] {
+  return renderMathTokens(tokenizeMath(text), keyBase);
+}
+
+// ── renderCodeAndMath: split on `code` spans, then math each piece ──────────
+function renderCodeAndMath(text: string, keyBase: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  const codeParts = text.split(/(`[^`\n]+`)/g);
+  codeParts.forEach((part, ci) => {
+    if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
+      nodes.push(
+        <code className="inline" key={`${keyBase}-c${ci}`}>
+          {part.slice(1, -1)}
+        </code>
+      );
+    } else if (part) {
+      renderSegment(part, `${keyBase}-c${ci}`).forEach((n) => nodes.push(n));
+    }
   });
   return nodes;
 }
+
+// ── renderInline: bold → code → math (highest-level pass first) ─────────────
+// Parsing bold BEFORE math means **…** spanning math tokens renders correctly.
+function renderInline(rawText: string, keyBase: string): React.ReactNode[] {
+  const text = normalizeMath(rawText);
+  const nodes: React.ReactNode[] = [];
+
+  // Split on **bold** runs. Allow anything inside except a bare ** (non-greedy).
+  const parts = text.split(/(\*\*(?:[^*]|\*(?!\*))+\*\*)/g);
+  parts.forEach((part, bi) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      const inner = part.slice(2, -2);
+      nodes.push(
+        <strong key={`${keyBase}-b${bi}`}>
+          {renderCodeAndMath(inner, `${keyBase}-b${bi}`)}
+        </strong>
+      );
+    } else if (part) {
+      renderCodeAndMath(part, `${keyBase}-t${bi}`).forEach((n) => nodes.push(n));
+    }
+  });
+  return nodes;
+}
+
+// ── MarkdownLite component ──────────────────────────────────────────────────
 
 export default function MarkdownLite({ content }: { content: string }) {
   const blocks: React.ReactNode[] = [];
@@ -154,7 +209,12 @@ export default function MarkdownLite({ content }: { content: string }) {
 
     const flushPara = () => {
       const text = paraBuffer.join(" ").trim();
-      if (text) blocks.push(<p key={`p-${idx}-${blocks.length}`}>{renderInline(text, `p-${idx}-${blocks.length}`)}</p>);
+      if (text)
+        blocks.push(
+          <p key={`p-${idx}-${blocks.length}`}>
+            {renderInline(text, `p-${idx}-${blocks.length}`)}
+          </p>
+        );
       paraBuffer = [];
     };
     const flushList = () => {
@@ -179,8 +239,14 @@ export default function MarkdownLite({ content }: { content: string }) {
         flushPara();
         flushList();
         const level = heading[1].length;
-        const HTag = (level === 1 ? "h1" : level === 2 ? "h2" : "h3") as keyof React.JSX.IntrinsicElements;
-        blocks.push(<HTag key={`h-${idx}-${blocks.length}`}>{renderInline(heading[2], `h-${idx}`)}</HTag>);
+        const HTag = (
+          level === 1 ? "h1" : level === 2 ? "h2" : "h3"
+        ) as keyof React.JSX.IntrinsicElements;
+        blocks.push(
+          <HTag key={`h-${idx}-${blocks.length}`}>
+            {renderInline(heading[2], `h-${idx}`)}
+          </HTag>
+        );
       } else if (bullet) {
         flushPara();
         if (!listBuffer || listBuffer.type !== "ul") {

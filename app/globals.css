@@ -2,20 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* ─── Semantic color tokens ─────────────────────────────────────────────────
+   Consumed by the Tailwind token classes (surface, fg, border, …).
+   Toggle .dark / .light on <html> to switch themes.
+   Default (.dark) matches the original dark appearance.
+───────────────────────────────────────────────────────────────────────────── */
+
+:root,
+.dark {
   color-scheme: dark;
+  --color-surface:        2 6 23;       /* slate-950 */
+  --color-surface-muted:  15 23 42;     /* slate-900 */
+  --color-surface-raised: 30 41 59;     /* slate-800 */
+  --color-border:         51 65 85;     /* slate-700 */
+  --color-fg:             241 245 249;  /* slate-100 */
+  --color-fg-muted:       148 163 184;  /* slate-400 */
+  --color-fg-subtle:      100 116 139;  /* slate-500 */
+  --color-accent:         99 102 241;   /* indigo-500 */
+  --color-accent-hover:   79  70 229;   /* indigo-600 */
 }
 
-html,
+.light {
+  color-scheme: light;
+  --color-surface:        248 250 252;  /* slate-50 */
+  --color-surface-muted:  241 245 249;  /* slate-100 */
+  --color-surface-raised: 226 232 240;  /* slate-200 */
+  --color-border:         203 213 225;  /* slate-300 */
+  --color-fg:             15 23 42;     /* slate-900 */
+  --color-fg-muted:       71 85 105;    /* slate-600 */
+  --color-fg-subtle:      100 116 139;  /* slate-500 */
+  --color-accent:         99 102 241;   /* indigo-500 */
+  --color-accent-hover:   67  56 202;   /* indigo-700 */
+}
+
 body {
-  height: 100%;
+  @apply bg-surface text-fg antialiased;
 }
 
-body {
-  @apply bg-slate-950 text-slate-100 antialiased;
+/* ─── Lightweight markdown rendering ────────────────────────────────────── */
+.prose-tutor {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
-
-/* Lightweight markdown rendering */
 .prose-tutor p {
   @apply my-2 leading-relaxed;
 }
@@ -26,10 +54,10 @@ body {
   @apply my-2 list-decimal pl-6 space-y-1;
 }
 .prose-tutor code.inline {
-  @apply rounded bg-slate-800 px-1.5 py-0.5 text-[0.85em] font-mono text-amber-200;
+  @apply rounded bg-surface-raised px-1.5 py-0.5 text-[0.85em] font-mono text-amber-600 dark:text-amber-200;
 }
 .prose-tutor pre {
-  @apply my-3 overflow-x-auto rounded-lg bg-slate-900 border border-slate-800 p-3 text-sm font-mono;
+  @apply my-3 overflow-x-auto rounded-lg bg-surface-muted border border-border p-3 text-sm font-mono;
 }
 .prose-tutor h1,
 .prose-tutor h2,
@@ -37,7 +65,7 @@ body {
   @apply mt-3 mb-1 font-semibold;
 }
 
-/* Math / chemistry (KaTeX) */
+/* ─── Math / chemistry (KaTeX) ───────────────────────────────────────────── */
 .prose-tutor .katex {
   font-size: 1.05em;
 }
@@ -47,21 +75,31 @@ body {
 .prose-tutor .katex-block .katex-display {
   @apply my-0;
 }
-/* Let long inline formulas scroll instead of overflowing the bubble */
+/* Inline math is white-space:nowrap; cap its width and let it scroll inside the
+   bubble so a wide reaction can't widen the whole chat panel. */
 .prose-tutor .katex {
   max-width: 100%;
+  display: inline-block;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: middle;
+}
+/* Safety net: never let KaTeX's accessibility MathML copy affect layout.
+   It is absolutely positioned and can escape overflow:hidden ancestors. */
+.prose-tutor .katex-mathml {
+  display: none;
 }
 
-/* Thin scrollbars */
+/* ─── Thin scrollbars ────────────────────────────────────────────────────── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #334155 transparent;
+  scrollbar-color: rgb(var(--color-border)) transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: rgb(var(--color-border));
   border-radius: 9999px;
 }

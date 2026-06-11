@@ -7,6 +7,7 @@ import {
   topicPrerequisites,
   addGap,
   clearGapsForTopic,
+  markSubtopicQuizzed,
 } from "@/lib/data";
 import type { Grade } from "@/lib/schemas";
 import type { Mastery, Topic } from "@/db/schema";
@@ -34,8 +35,14 @@ export type NextStep = {
  * Apply a structured grade to a student's mastery for a topic.
  * BKT-style: nudge mastery by the model's suggested delta with light smoothing,
  * advance Bloom level once a topic is reliably mastered, and record/clear gaps.
+ * If a focusSubtopic is provided (from the quiz UI), updates per-subtopic progress too.
  */
-export function applyGrade(studentId: string, topicId: string, grade: Grade): ApplyGradeResult {
+export function applyGrade(
+  studentId: string,
+  topicId: string,
+  grade: Grade,
+  focusSubtopic?: string
+): ApplyGradeResult {
   const topic = getTopic(topicId);
   const prev = getMastery(studentId, topicId);
   const prevMastery = prev?.mastery ?? 0;
@@ -58,6 +65,11 @@ export function applyGrade(studentId: string, topicId: string, grade: Grade): Ap
     attempts: (prev?.attempts ?? 0) + 1,
     correct: (prev?.correct ?? 0) + (grade.correct ? 1 : 0),
   });
+
+  // Per-subtopic quizzed status.
+  if (focusSubtopic) {
+    markSubtopicQuizzed(studentId, topicId, focusSubtopic, grade.score ?? (grade.correct ? 1 : 0));
+  }
 
   // Track and clear gaps.
   for (const m of grade.misconceptions) {

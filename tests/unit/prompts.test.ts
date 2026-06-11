@@ -10,6 +10,7 @@ const student: Student = {
   isAdmin: false,
   pacePref: "normal",
   tonePref: "encouraging",
+  themePref: "system",
   createdAt: 0,
   lastActiveAt: 0,
 };
@@ -41,6 +42,8 @@ const masteryRow: Mastery = {
   attempts: 3,
   correct: 1,
   lastSeen: 0,
+  phase: "learn",
+  progress: "{}",
 };
 
 describe("buildTutorSystemPrompt", () => {

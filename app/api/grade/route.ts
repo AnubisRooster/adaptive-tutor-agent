@@ -15,6 +15,9 @@ type Body = {
   topicId: string;
   question: string;
   answer: string;
+  // If the quiz was focused on a specific subtopic, the UI sends it here so
+  // applyGrade can record per-subtopic quizzed status.
+  focus?: { name: string };
 };
 
 const FALLBACK: Grade = {
@@ -38,6 +41,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
   }
   const { subjectId, topicId, question, answer } = body;
+  const focusSubtopic = body.focus?.name;
   const subject = getSubject(subjectId);
   const topic = getTopic(topicId);
   if (!subject || !topic) return NextResponse.json({ error: "Unknown subject/topic." }, { status: 400 });
@@ -63,7 +67,7 @@ export async function POST(req: Request) {
     console.error("[grade] model/parse error:", err);
   }
 
-  const result = applyGrade(student.id, topicId, grade);
+  const result = applyGrade(student.id, topicId, grade, focusSubtopic);
 
   // Persist the answer and the tutor's feedback for resume.
   const session = getOrCreateSession(student.id, subjectId);
@@ -80,6 +84,7 @@ export async function POST(req: Request) {
     grade,
     mastery: result.mastery.mastery,
     bloomLevel: result.mastery.bloomLevel,
+    phase: result.mastery.phase,
     leveledUp: result.leveledUp,
     next: result.next,
   });

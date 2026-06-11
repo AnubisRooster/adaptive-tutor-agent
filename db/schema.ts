@@ -11,6 +11,8 @@ export const students = sqliteTable("students", {
   isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   pacePref: text("pace_pref").notNull().default("normal"),
   tonePref: text("tone_pref").notNull().default("encouraging"),
+  // "system" | "light" | "dark"
+  themePref: text("theme_pref").notNull().default("system"),
   createdAt: integer("created_at").notNull(),
   lastActiveAt: integer("last_active_at").notNull(),
 });
@@ -42,6 +44,8 @@ export const topics = sqliteTable(
 );
 
 // Per-student, per-topic mastery state. mastery in [0,1]; bloomLevel 1..6.
+// phase: "learn" | "quiz" | "mastery" | "complete"
+// progress: JSON object keyed by subtopic name: { taught, quizzed, lastScore }
 export const mastery = sqliteTable(
   "mastery",
   {
@@ -53,6 +57,9 @@ export const mastery = sqliteTable(
     attempts: integer("attempts").notNull().default(0),
     correct: integer("correct").notNull().default(0),
     lastSeen: integer("last_seen").notNull().default(0),
+    phase: text("phase").notNull().default("learn"),
+    // JSON: Record<subtopicName, { taught: boolean; quizzed: boolean; lastScore: number | null }>
+    progress: text("progress").notNull().default("{}"),
   },
   (t) => ({
     uniq: uniqueIndex("mastery_student_topic").on(t.studentId, t.topicId),

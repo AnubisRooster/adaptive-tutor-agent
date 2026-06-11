@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import HealthBadge from "@/components/HealthBadge";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type Profile = { id: string; name: string; color: string; hasPin: boolean };
 
@@ -74,24 +75,27 @@ export default function ProfilesPage() {
       <header className="mb-10 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Adaptive Tutor</h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-fg-muted">
             Your personal mentor for Philosophy, Psychology, AI, Physics &amp; Coding.
           </p>
         </div>
-        <HealthBadge />
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <HealthBadge />
+        </div>
       </header>
 
-      <h2 className="mb-4 text-lg font-semibold text-slate-200">Who&apos;s learning?</h2>
+      <h2 className="mb-4 text-lg font-semibold text-fg">Who&apos;s learning?</h2>
 
       {loading ? (
-        <p className="text-slate-400">Loading profiles…</p>
+        <p className="text-fg-muted">Loading profiles…</p>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {profiles.map((p) => (
             <button
               key={p.id}
               onClick={() => (p.hasPin ? setPinFor(p) : select(p))}
-              className="group flex flex-col items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 transition hover:border-slate-600 hover:bg-slate-900"
+              className="group flex flex-col items-center gap-3 rounded-2xl border border-border bg-surface-muted/60 p-5 transition hover:border-fg-subtle hover:bg-surface-muted"
             >
               <span
                 className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold text-white shadow-lg"
@@ -99,7 +103,7 @@ export default function ProfilesPage() {
               >
                 {p.name.charAt(0).toUpperCase()}
               </span>
-              <span className="flex items-center gap-1 text-sm font-medium text-slate-200">
+              <span className="flex items-center gap-1 text-sm font-medium text-fg">
                 {p.name}
                 {p.hasPin && <span title="PIN protected">🔒</span>}
               </span>
@@ -108,9 +112,9 @@ export default function ProfilesPage() {
 
           <button
             onClick={() => setCreating(true)}
-            className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-700 p-5 text-slate-400 transition hover:border-slate-500 hover:text-slate-200"
+            className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border p-5 text-fg-muted transition hover:border-fg-subtle hover:text-fg"
           >
-            <span className="flex h-16 w-16 items-center justify-center rounded-full border border-slate-700 text-3xl">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full border border-border text-3xl">
               +
             </span>
             <span className="text-sm font-medium">New profile</span>
@@ -118,13 +122,13 @@ export default function ProfilesPage() {
         </div>
       )}
 
-      {error && <p className="mt-4 text-sm text-rose-400">{error}</p>}
+      {error && <p className="mt-4 text-sm text-rose-500">{error}</p>}
 
       {/* PIN modal */}
       {pinFor && (
         <Modal onClose={() => { setPinFor(null); setPin(""); }}>
           <h3 className="mb-1 text-lg font-semibold">Enter PIN for {pinFor.name}</h3>
-          <p className="mb-4 text-sm text-slate-400">This profile is PIN protected.</p>
+          <p className="mb-4 text-sm text-fg-muted">This profile is PIN protected.</p>
           <input
             autoFocus
             type="password"
@@ -133,11 +137,11 @@ export default function ProfilesPage() {
             onChange={(e) => setPin(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && select(pinFor, pin)}
             placeholder="••••"
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-center text-lg tracking-widest outline-none focus:border-indigo-500"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-center text-lg tracking-widest outline-none focus:border-accent"
           />
           <button
             onClick={() => select(pinFor, pin)}
-            className="mt-4 w-full rounded-lg bg-indigo-600 py-2 font-medium hover:bg-indigo-500"
+            className="mt-4 w-full rounded-lg bg-accent py-2 font-medium text-white hover:bg-accent-hover"
           >
             Continue
           </button>
@@ -148,37 +152,37 @@ export default function ProfilesPage() {
       {creating && (
         <Modal onClose={() => setCreating(false)}>
           <h3 className="mb-4 text-lg font-semibold">Create a profile</h3>
-          <label className="mb-1 block text-sm text-slate-400">Name</label>
+          <label className="mb-1 block text-sm text-fg-muted">Name</label>
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Maya"
-            className="mb-4 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 outline-none focus:border-indigo-500"
+            className="mb-4 w-full rounded-lg border border-border bg-surface px-3 py-2 outline-none focus:border-accent"
           />
-          <label className="mb-2 block text-sm text-slate-400">Color</label>
+          <label className="mb-2 block text-sm text-fg-muted">Color</label>
           <div className="mb-4 flex flex-wrap gap-2">
             {COLORS.map((c) => (
               <button
                 key={c}
                 onClick={() => setColor(c)}
-                className={`h-8 w-8 rounded-full ring-2 ${color === c ? "ring-white" : "ring-transparent"}`}
+                className={`h-8 w-8 rounded-full ring-2 ${color === c ? "ring-fg" : "ring-transparent"}`}
                 style={{ backgroundColor: c }}
                 aria-label={`color ${c}`}
               />
             ))}
           </div>
-          <label className="mb-1 block text-sm text-slate-400">PIN (optional, 4–8 digits)</label>
+          <label className="mb-1 block text-sm text-fg-muted">PIN (optional, 4–8 digits)</label>
           <input
             value={newPin}
             onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 8))}
             inputMode="numeric"
             placeholder="optional"
-            className="mb-4 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 outline-none focus:border-indigo-500"
+            className="mb-4 w-full rounded-lg border border-border bg-surface px-3 py-2 outline-none focus:border-accent"
           />
           <button
             onClick={create}
-            className="w-full rounded-lg bg-indigo-600 py-2 font-medium hover:bg-indigo-500"
+            className="w-full rounded-lg bg-accent py-2 font-medium text-white hover:bg-accent-hover"
           >
             Start learning
           </button>
@@ -195,7 +199,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl"
+        className="w-full max-w-sm rounded-2xl border border-border bg-surface-muted p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {children}

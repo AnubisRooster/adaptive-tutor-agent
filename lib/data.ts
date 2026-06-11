@@ -78,6 +78,10 @@ export function touchStudent(id: string): void {
   db.update(students).set({ lastActiveAt: now() }).where(eq(students.id, id)).run();
 }
 
+export function updateStudentTheme(studentId: string, themePref: string): void {
+  db.update(students).set({ themePref }).where(eq(students.id, studentId)).run();
+}
+
 // ---------- Subjects & topics ----------
 
 export function listSubjects(): Subject[] {
@@ -244,9 +248,134 @@ export function upsertMastery(
     attempts: patch.attempts ?? 0,
     correct: patch.correct ?? 0,
     lastSeen: now(),
+    phase: "learn",
+    progress: "{}",
   };
   db.insert(mastery).values(row).run();
   return row as Mastery;
+}
+
+// ---------- Phase & progress helpers ----------------------------------------
+
+export type SubtopicProgress = {
+  taught: boolean;
+  quizzed: boolean;
+  lastScore: number | null;
+};
+export type ProgressMap = Record<string, SubtopicProgress>;
+export type TopicPhase = "learn" | "quiz" | "mastery" | "complete";
+
+function parseProgress(json: string): ProgressMap {
+  try {
+    return JSON.parse(json) as ProgressMap;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Mark a subtopic as taught.  Moves the topic phase to "learn" if it was still
+ * unstarted.
+ */
+export function markSubtopicTaught(
+  studentId: string,
+  topicId: string,
+  subtopicName: string
+): Mastery {
+  const existing = getMastery(studentId, topicId);
+  const prog = parseProgress(existing?.progress ?? "{}");
+  prog[subtopicName] = {
+    taught: true,
+    quizzed: prog[subtopicName]?.quizzed ?? false,
+    lastScore: prog[subtopicName]?.lastScore ?? null,
+  };
+  const phase = recomputePhase(prog, existing?.mastery ?? 0, existing?.phase ?? "learn");
+  const row = {
+    id: uuid(),
+    studentId,
+    topicId,
+    mastery: existing?.mastery ?? 0,
+    bloomLevel: existing?.bloomLevel ?? 1,
+    attempts: existing?.attempts ?? 0,
+    correct: existing?.correct ?? 0,
+    lastSeen: now(),
+    phase,
+    progress: JSON.stringify(prog),
+  };
+  if (existing) {
+    db.update(mastery).set({ phase, progress: JSON.stringify(prog), lastSeen: now() }).where(eq(mastery.id, existing.id)).run();
+    return { ...existing, phase, progress: JSON.stringify(prog) };
+  }
+  db.insert(mastery).values(row).run();
+  return row as Mastery;
+}
+
+/**
+ * Mark a subtopic as quizzed and record its score.
+ */
+export function markSubtopicQuizzed(
+  studentId: string,
+  topicId: string,
+  subtopicName: string,
+  score: number
+): Mastery {
+  const existing = getMastery(studentId, topicId);
+  const prog = parseProgress(existing?.progress ?? "{}");
+  prog[subtopicName] = {
+    taught: prog[subtopicName]?.taught ?? false,
+    quizzed: true,
+    lastScore: score,
+  };
+  const phase = recomputePhase(prog, existing?.mastery ?? 0, existing?.phase ?? "learn");
+  if (existing) {
+    db.update(mastery).set({ phase, progress: JSON.stringify(prog), lastSeen: now() }).where(eq(mastery.id, existing.id)).run();
+    return { ...existing, phase, progress: JSON.stringify(prog) };
+  }
+  const row = {
+    id: uuid(),
+    studentId,
+    topicId,
+    mastery: 0,
+    bloomLevel: 1,
+    attempts: 0,
+    correct: 0,
+    lastSeen: now(),
+    phase,
+    progress: JSON.stringify(prog),
+  };
+  db.insert(mastery).values(row).run();
+  return row as Mastery;
+}
+
+/**
+ * Compute the appropriate phase given the progress map and current mastery.
+ *   learn   → any subtopic still untaught
+ *   quiz    → all taught but any unquizzed, or avg score < 0.65
+ *   mastery → all taught + quizzed, avg score ≥ 0.65 but overall mastery < 0.8
+ *   complete → overall mastery ≥ 0.8
+ *
+ * Never moves backward (pass currentPhase to pin "complete").
+ */
+export function recomputePhase(
+  prog: ProgressMap,
+  overallMastery: number,
+  currentPhase: TopicPhase | string
+): TopicPhase {
+  if (currentPhase === "complete") return "complete";
+  if (overallMastery >= 0.8) return "complete";
+
+  const entries = Object.values(prog);
+  if (entries.length === 0) return "learn";
+
+  const allTaught = entries.every((e) => e.taught);
+  const allQuizzed = entries.every((e) => e.quizzed);
+  const scored = entries.filter((e) => e.lastScore !== null);
+  const avgScore = scored.length > 0 ? scored.reduce((s, e) => s + (e.lastScore ?? 0), 0) / scored.length : 0;
+
+  if (!allTaught) return "learn";
+  if (!allQuizzed || avgScore < 0.65) return "quiz";
+  if (overallMastery < 0.8) return "mastery";
+  return "complete";
 }
 
 // ---------- Sessions & messages ----------

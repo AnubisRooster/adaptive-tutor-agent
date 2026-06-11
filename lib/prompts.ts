@@ -30,9 +30,17 @@ const BASE_RULES = `You are an expert, caring personal tutor and mentor. Your go
    - Chemistry — ALWAYS use mhchem \\ce{…}: e.g. \\ce{H2O}, \\ce{CO2}, \\ce{2H2 + O2 -> 2H2O}, \\ce{CH3COOH}, ions like \\ce{SO4^2-}, states like \\ce{NaCl(aq)}. Never write subscripts/superscripts as plain text (write \\ce{H2O}, not H2O or H₂O).
    - Math: use proper notation, e.g. \\( x^2 \\), \\( \\frac{a}{b} \\), \\( \\sqrt{2} \\), \\( \\Delta H \\), \\[ E = mc^2 \\].
    - Use math delimiters ONLY for genuine math/science expressions and symbols. Do NOT wrap plain numbers, quantities, units, money, or ordinary words in them: write "36.0 g of water is 2.0 moles", NOT "$36.0$ g of water is $2.0$ moles". Prefer \\( … \\) over $…$ for inline math.
+   - NEVER double-wrap delimiters. Write \\( 0.174\\ \\text{mol} \\), NOT $\\( 0.174\\ \\text{mol} \\)$ — mixing $ with \\( \\) or \\[ \\] is forbidden.
+   - NEVER use $\\text{X}$ to label standalone letters or element symbols in prose. Write the symbol as plain text (H, Cl, Na) or as part of a full formula with \\ce{…}. $\\text{…}$ may only appear INSIDE an \\( … \\) or \\[ … \\] expression that already contains math, e.g. \\( 0.1\\text{ mol} \\).
    - Do NOT put LaTeX/\\ce{} inside code fences or backticks — those render literally.`;
 
 export type Focus = { name: string; description?: string };
+
+export type SubtopicProgressEntry = {
+  taught: boolean;
+  quizzed: boolean;
+  lastScore: number | null;
+};
 
 export function buildTutorSystemPrompt(args: {
   student: Student;
@@ -48,6 +56,7 @@ export function buildTutorSystemPrompt(args: {
   const m = masteryRow?.mastery ?? 0;
   const bloom = masteryRow?.bloomLevel ?? 1;
   const tone = TONE_GUIDE[student.tonePref] ?? TONE_GUIDE.encouraging;
+  const phase = masteryRow?.phase ?? "learn";
 
   const modeLine =
     mode === "quiz"
@@ -75,6 +84,29 @@ export function buildTutorSystemPrompt(args: {
       } within this topic. Center this turn specifically on that sub-area; do not drift to the rest of the topic unless it's needed to support it.`
     : "";
 
+  // Phase & progress checklist so the tutor teaches sequentially and proposes
+  // moving to quizzing/mastery at the right moment.
+  let phaseBlock = "";
+  try {
+    const prog = JSON.parse(masteryRow?.progress ?? "{}") as Record<string, SubtopicProgressEntry>;
+    const entries = Object.entries(prog);
+    if (entries.length > 0) {
+      const checklistLines = entries.map(([name, s]) => {
+        const icon = s.quizzed ? "✔" : s.taught ? "📖" : "○";
+        const score = s.lastScore !== null ? ` (score ${Math.round(s.lastScore * 100)}%)` : "";
+        return `  ${icon} ${name}${score}`;
+      });
+      const phaseLabel =
+        phase === "learn" ? "LEARN — teach the remaining sub-areas"
+        : phase === "quiz" ? "QUIZ — test the student on taught sub-areas"
+        : phase === "mastery" ? "MASTERY — comprehensive check; address any remaining gaps"
+        : "COMPLETE — topic fully mastered";
+      phaseBlock = `\nTopic phase: ${phaseLabel}\nSub-area checklist (○=not started, 📖=taught, ✔=quizzed):\n${checklistLines.join("\n")}\nWhen mode is TEACH, work through un-started sub-areas in order. When all are taught, gently suggest moving to the quiz phase.`;
+    }
+  } catch {
+    // ignore JSON parse errors
+  }
+
   return `${BASE_RULES}
 
 Tone: ${tone}
@@ -87,7 +119,7 @@ Student: ${student.name}.
 Estimated mastery of this topic: ${(m * 100).toFixed(0)}% (${masteryBand(m)}).
 Target cognitive level (Bloom's): ${bloomName(bloom)} (level ${bloom}).
 Calibrate difficulty to that mastery and Bloom level. If mastery is low, build from fundamentals with simple language and concrete examples. If high, push toward analysis, evaluation, and synthesis.
-${modeLine}${focusBlock}${gapsBlock}${contextBlock}`;
+${modeLine}${focusBlock}${phaseBlock}${gapsBlock}${contextBlock}`;
 }
 
 // Evaluator: grade a single answer. Returns guidance that the system uses to

@@ -34,7 +34,7 @@ export default function HealthBadge() {
   }, []);
 
   if (!health) {
-    return <span className="text-xs text-slate-500">checking model…</span>;
+    return <span className="text-xs text-fg-subtle">checking model…</span>;
   }
 
   const good = health.ok && health.tutorModelAvailable;

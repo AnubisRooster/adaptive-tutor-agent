@@ -18,6 +18,7 @@ export async function generateQuizQuestion(args: {
   topicId: string;
   kind?: "quiz" | "diagnostic";
   focus?: { name: string; description?: string };
+  recentHistory?: { role: "user" | "assistant"; content: string }[];
 }): Promise<QuizQuestion> {
   const student = getStudent(args.studentId);
   const subject = getSubject(args.subjectId);
@@ -51,11 +52,20 @@ export async function generateQuizQuestion(args: {
     ? `\n\nReference context (base the question on this; do not contradict it):\n${ctx}`
     : "";
 
+  // Extract the most recent tutor teaching turn to bias the question.
+  const history = args.recentHistory ?? [];
+  const lastTeachTurn = [...history]
+    .reverse()
+    .find((m) => m.role === "assistant" && m.content.trim().length > 40);
+  const recentLine = lastTeachTurn
+    ? `\n\nMost recently taught material (PRIORITIZE a question on this):\n${lastTeachTurn.content.slice(0, 800)}`
+    : "";
+
   const user = `Subject: ${subject.name}
 Topic: ${topic.name} — ${topic.description}
 Student mastery of this topic: ${(mastery * 100).toFixed(0)}%
 Target cognitive level (Bloom's): ${bloomName(bloom)} (level ${bloom}).
-Calibrate difficulty to that mastery and Bloom level.${focusLine}${gapsLine}${ctxLine}
+Calibrate difficulty to that mastery and Bloom level.${focusLine}${gapsLine}${recentLine}${ctxLine}
 
 Write the question as JSON. Put the question text in "question", set "bloomLevel" to ${bloom}, and put a brief grading rubric in "idealAnswerOutline".`;
 

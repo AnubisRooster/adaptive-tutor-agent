@@ -11,6 +11,9 @@ type Body = {
   topicId?: string;
   kind?: "quiz" | "diagnostic";
   focus?: { name: string; description?: string };
+  // Recent conversation history (last ~8 messages). Used to bias questions
+  // toward what was just taught.
+  history?: { role: "user" | "assistant"; content: string }[];
 };
 
 // Generate one structured question for the current topic. Persisted as an
@@ -32,12 +35,14 @@ export async function POST(req: Request) {
   }
 
   try {
+    const recentHistory = Array.isArray(body.history) ? body.history.slice(-8) : [];
     const q = await generateQuizQuestion({
       studentId: student.id,
       subjectId,
       topicId,
       kind: body.kind === "diagnostic" ? "diagnostic" : "quiz",
       focus: body.focus?.name ? { name: body.focus.name, description: body.focus.description } : undefined,
+      recentHistory,
     });
     const session = getOrCreateSession(student.id, subjectId);
     addMessage({ sessionId: session.id, studentId: student.id, role: "assistant", content: q.question, topicId });

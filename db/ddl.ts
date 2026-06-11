@@ -127,4 +127,7 @@ export function applySchema(db: DatabaseType.Database): void {
   ensureColumn(db, "knowledge_chunks", "source_id", "TEXT");
   ensureColumn(db, "students", "is_admin", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "topics", "subtopics", "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn(db, "students", "theme_pref", "TEXT NOT NULL DEFAULT 'system'");
+  ensureColumn(db, "mastery", "phase", "TEXT NOT NULL DEFAULT 'learn'");
+  ensureColumn(db, "mastery", "progress", "TEXT NOT NULL DEFAULT '{}'");
 }

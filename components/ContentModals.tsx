@@ -16,7 +16,7 @@ function Modal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
-        className={`max-h-[88vh] w-full overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl ${
+        className={`max-h-[88vh] w-full overflow-y-auto rounded-2xl border border-border bg-surface-muted p-6 shadow-2xl ${
           wide ? "max-w-2xl" : "max-w-md"
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -297,20 +297,20 @@ export function AddSubjectModal({
       {step === "input" ? (
         <>
           <h3 className="mb-3 text-lg font-semibold">Add a subject</h3>
-          <label className="mb-1 block text-sm text-slate-400">Subject name</label>
+          <label className="mb-1 block text-sm text-fg-muted">Subject name</label>
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Chemistry"
-            className="mb-3 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 outline-none focus:border-indigo-500"
+            className="mb-3 w-full rounded-lg border border-border bg-surface px-3 py-2 outline-none focus:border-accent"
           />
 
-          <div className="mb-4 flex gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1 text-sm">
+          <div className="mb-4 flex gap-1 rounded-lg border border-border bg-surface/60 p-1 text-sm">
             <button
               onClick={() => { setCreationMode("ai"); setError(null); }}
               className={`flex-1 rounded-md px-3 py-1.5 transition-colors ${
-                creationMode === "ai" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
+                creationMode === "ai" ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
               }`}
             >
               Draft topics with AI
@@ -318,7 +318,7 @@ export function AddSubjectModal({
             <button
               onClick={() => { setCreationMode("chapters"); setError(null); }}
               className={`flex-1 rounded-md px-3 py-1.5 transition-colors ${
-                creationMode === "chapters" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
+                creationMode === "chapters" ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
               }`}
             >
               Import chapter PDFs
@@ -343,10 +343,10 @@ export function AddSubjectModal({
             />
           ) : (
           <>
-          <p className="mb-3 text-sm text-slate-400">
+          <p className="mb-3 text-sm text-fg-muted">
             The tutor will draft a topic path you can edit before saving.
           </p>
-          <label className="mb-1 block text-sm text-slate-400">
+          <label className="mb-1 block text-sm text-fg-muted">
             Optional: paste a chapter list or description to ground the topics
           </label>
           <textarea
@@ -354,28 +354,28 @@ export function AddSubjectModal({
             onChange={(e) => setSampleText(e.target.value)}
             rows={4}
             placeholder="Paste a table of contents or syllabus (optional)"
-            className="mb-4 w-full resize-none rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+            className="mb-4 w-full resize-none rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
           />
           {error && <p className="mb-3 text-sm text-rose-400">{error}</p>}
 
           {busy && progress && (
-            <div className="mb-3 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-              <div className="mb-1.5 flex items-center justify-between text-xs text-slate-300">
+            <div className="mb-3 rounded-lg border border-border bg-surface/60 p-3">
+              <div className="mb-1.5 flex items-center justify-between text-xs text-fg">
                 <span className="flex items-center gap-2">
-                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-indigo-400" />
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-accent" />
                   Drafting curriculum… {elapsed}s
                 </span>
-                <span className="text-slate-400">
+                <span className="text-fg-muted">
                   {progress.topics > 0 ? `${progress.topics} topics` : "thinking…"}
                 </span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
                 <div
-                  className="h-full bg-indigo-500 transition-all duration-300"
+                  className="h-full bg-accent transition-all duration-300"
                   style={{ width: `${Math.min(92, Math.max(6, (progress.topics / 8) * 100))}%` }}
                 />
               </div>
-              <p className="mt-1.5 text-[11px] text-slate-500">
+              <p className="mt-1.5 text-[11px] text-fg-subtle">
                 The first run can take ~30–60s while the model loads into memory.
               </p>
             </div>
@@ -385,14 +385,14 @@ export function AddSubjectModal({
             <button
               onClick={startManual}
               disabled={busy}
-              className="text-sm text-slate-400 hover:text-slate-200 disabled:opacity-50"
+              className="text-sm text-fg-muted hover:text-fg disabled:opacity-50"
             >
               Add topics manually
             </button>
             <button
               onClick={makeDraft}
               disabled={busy}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500 disabled:opacity-50"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium hover:bg-accent-hover disabled:opacity-50"
             >
               {busy ? "Drafting…" : "Draft topics"}
             </button>
@@ -409,52 +409,52 @@ export function AddSubjectModal({
                 value={draft.subject.name}
                 onChange={(e) => setDraft({ ...draft, subject: { ...draft.subject, name: e.target.value } })}
                 placeholder="Subject name"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-medium outline-none focus:border-indigo-500"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 font-medium outline-none focus:border-accent"
               />
               <input
                 value={draft.subject.description}
                 onChange={(e) => setDraft({ ...draft, subject: { ...draft.subject, description: e.target.value } })}
                 placeholder="One-line description"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
               />
               <textarea
                 value={draft.subject.framing}
                 onChange={(e) => setDraft({ ...draft, subject: { ...draft.subject, framing: e.target.value } })}
                 rows={2}
                 placeholder="How should the tutor teach this subject?"
-                className="w-full resize-none rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-300 outline-none focus:border-indigo-500"
+                className="w-full resize-none rounded-lg border border-border bg-surface px-3 py-2 text-xs text-fg outline-none focus:border-accent"
               />
             </div>
 
             <div className="mb-2 flex items-center justify-between">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
                 Topics ({draft.topics.length})
               </h4>
-              <button onClick={addTopic} className="text-xs text-indigo-400 hover:text-indigo-300">
+              <button onClick={addTopic} className="text-xs text-accent hover:text-accent-hover">
                 + Add topic
               </button>
             </div>
             <ol className="space-y-3">
               {draft.topics.map((t, i) => (
-                <li key={i} className="rounded-lg border border-slate-800 p-3">
+                <li key={i} className="rounded-lg border border-border p-3">
                   <div className="flex items-start gap-2">
-                    <span className="mt-2 text-xs text-slate-500">{i + 1}.</span>
+                    <span className="mt-2 text-xs text-fg-subtle">{i + 1}.</span>
                     <div className="flex-1 space-y-2">
                       <input
                         value={t.name}
                         onChange={(e) => updateTopic(i, { name: e.target.value })}
                         placeholder="Topic name"
-                        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm outline-none focus:border-indigo-500"
+                        className="w-full rounded border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent"
                       />
                       <input
                         value={t.description}
                         onChange={(e) => updateTopic(i, { description: e.target.value })}
                         placeholder="Short description"
-                        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-300 outline-none focus:border-indigo-500"
+                        className="w-full rounded border border-border bg-surface px-2 py-1.5 text-xs text-fg outline-none focus:border-accent"
                       />
                       {i > 0 && (
                         <div className="flex flex-wrap gap-1.5">
-                          <span className="text-[10px] uppercase tracking-wide text-slate-500">Prereqs:</span>
+                          <span className="text-[10px] uppercase tracking-wide text-fg-subtle">Prereqs:</span>
                           {draft.topics.slice(0, i).map((pt, j) => {
                             const on = t.prerequisiteIndexes.includes(j);
                             return (
@@ -468,7 +468,7 @@ export function AddSubjectModal({
                                   })
                                 }
                                 className={`rounded-full px-2 py-0.5 text-[10px] ${
-                                  on ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                                  on ? "bg-accent text-white" : "bg-surface-raised text-fg-muted hover:bg-surface-raised"
                                 }`}
                               >
                                 {pt.name || `#${j + 1}`}
@@ -480,7 +480,7 @@ export function AddSubjectModal({
                     </div>
                     <button
                       onClick={() => removeTopic(i)}
-                      className="mt-1 text-slate-500 hover:text-rose-400"
+                      className="mt-1 text-fg-subtle hover:text-rose-400"
                       title="Remove topic"
                     >
                       ✕
@@ -492,13 +492,13 @@ export function AddSubjectModal({
 
             {error && <p className="mt-3 text-sm text-rose-400">{error}</p>}
             <div className="mt-4 flex items-center justify-between gap-2">
-              <button onClick={() => setStep("input")} className="text-sm text-slate-400 hover:text-slate-200">
+              <button onClick={() => setStep("input")} className="text-sm text-fg-muted hover:text-fg">
                 ← Back
               </button>
               <button
                 onClick={save}
                 disabled={busy}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500 disabled:opacity-50"
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium hover:bg-accent-hover disabled:opacity-50"
               >
                 {busy ? "Saving…" : "Create subject"}
               </button>
@@ -541,7 +541,7 @@ function ChapterBuilder({
 }) {
   return (
     <>
-      <p className="mb-3 text-sm text-slate-400">
+      <p className="mb-3 text-sm text-fg-muted">
         Add one PDF per chapter. Each becomes a topic, and its PDF is ingested as that topic&apos;s material.
         Chapters are taught in order (each builds on the previous).
       </p>
@@ -551,53 +551,53 @@ function ChapterBuilder({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="One-line subject description (optional)"
-          className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
         />
         <input
           value={framing}
           onChange={(e) => setFraming(e.target.value)}
           placeholder="How should the tutor teach it? (optional)"
-          className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
         />
       </div>
 
       <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Chapters ({chapters.length})</h4>
-        <button onClick={addChapter} disabled={busy} className="text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">Chapters ({chapters.length})</h4>
+        <button onClick={addChapter} disabled={busy} className="text-xs text-accent hover:text-accent-hover disabled:opacity-50">
           + Add chapter
         </button>
       </div>
 
       <ol className="space-y-2">
         {chapters.map((c, i) => (
-          <li key={c.key} className="rounded-lg border border-slate-800 p-3">
+          <li key={c.key} className="rounded-lg border border-border p-3">
             <div className="flex items-start gap-2">
-              <span className="mt-2 text-xs text-slate-500">{i + 1}.</span>
+              <span className="mt-2 text-xs text-fg-subtle">{i + 1}.</span>
               <div className="flex-1 space-y-2">
                 <input
                   value={c.name}
                   onChange={(e) => updateChapter(c.key, { name: e.target.value })}
                   placeholder="Topic name (auto-filled from the PDF name)"
-                  className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm outline-none focus:border-indigo-500"
+                  className="w-full rounded border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent"
                 />
                 <input
                   value={c.description}
                   onChange={(e) => updateChapter(c.key, { description: e.target.value })}
                   placeholder="Short description (optional)"
-                  className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-300 outline-none focus:border-indigo-500"
+                  className="w-full rounded border border-border bg-surface px-2 py-1.5 text-xs text-fg outline-none focus:border-accent"
                 />
                 <input
                   type="file"
                   accept="application/pdf,.pdf"
                   onChange={(e) => onChapterFile(c.key, e.target.files?.[0] ?? null)}
-                  className="block w-full text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-slate-200 hover:file:bg-slate-700"
+                  className="block w-full text-xs text-fg file:mr-3 file:rounded-lg file:border-0 file:bg-surface-raised file:px-3 file:py-1.5 file:text-fg hover:file:bg-slate-700"
                 />
                 {c.file && <p className="text-[11px] text-emerald-400">{c.file.name}</p>}
               </div>
               <button
                 onClick={() => removeChapter(c.key)}
                 disabled={busy || chapters.length <= 1}
-                className="mt-1 text-slate-500 hover:text-rose-400 disabled:opacity-30"
+                className="mt-1 text-fg-subtle hover:text-rose-400 disabled:opacity-30"
                 title="Remove chapter"
               >
                 ✕
@@ -610,21 +610,21 @@ function ChapterBuilder({
       {error && <p className="mt-3 text-sm text-rose-400">{error}</p>}
 
       {importProgress && (
-        <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-          <div className="mb-1.5 flex items-center justify-between text-xs text-slate-300">
+        <div className="mt-3 rounded-lg border border-border bg-surface/60 p-3">
+          <div className="mb-1.5 flex items-center justify-between text-xs text-fg">
             <span className="flex items-center gap-2">
-              <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-indigo-400" />
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-accent" />
               {importProgress.label}
             </span>
-            <span className="text-slate-400">{importProgress.done}/{importProgress.total}</span>
+            <span className="text-fg-muted">{importProgress.done}/{importProgress.total}</span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
             <div
-              className="h-full bg-indigo-500 transition-all duration-300"
+              className="h-full bg-accent transition-all duration-300"
               style={{ width: `${importProgress.total ? (importProgress.done / importProgress.total) * 100 : 0}%` }}
             />
           </div>
-          <p className="mt-1.5 text-[11px] text-slate-500">
+          <p className="mt-1.5 text-[11px] text-fg-subtle">
             PDFs are uploaded then embedded in the background — you can start learning while they finish.
           </p>
         </div>
@@ -634,7 +634,7 @@ function ChapterBuilder({
         <button
           onClick={onSubmit}
           disabled={busy}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500 disabled:opacity-50"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium hover:bg-accent-hover disabled:opacity-50"
         >
           {busy ? "Creating…" : "Create subject & import"}
         </button>
@@ -775,12 +775,12 @@ export function AddMaterialModal({
   return (
     <Modal onClose={onClose}>
       <h3 className="mb-1 text-lg font-semibold">Add material to {subjectName}</h3>
-      <p className="mb-4 text-sm text-slate-400">
+      <p className="mb-4 text-sm text-fg-muted">
         Add a PDF, paste text, or pull from a web page (optionally crawling the rest of the site). It is
         chunked and embedded locally so the tutor can ground its answers in it.
       </p>
 
-      <div className="mb-4 flex gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1 text-sm">
+      <div className="mb-4 flex gap-1 rounded-lg border border-border bg-surface/60 p-1 text-sm">
         {(["pdf", "text", "url"] as const).map((m) => (
           <button
             key={m}
@@ -789,7 +789,7 @@ export function AddMaterialModal({
               setError(null);
             }}
             className={`flex-1 rounded-md px-3 py-1.5 capitalize transition-colors ${
-              mode === m ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
+              mode === m ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
             }`}
           >
             {m === "pdf" ? "PDF" : m === "url" ? "Web URL" : "Paste text"}
@@ -797,11 +797,11 @@ export function AddMaterialModal({
         ))}
       </div>
 
-      <label className="mb-1 block text-sm text-slate-400">Attach to topic (optional)</label>
+      <label className="mb-1 block text-sm text-fg-muted">Attach to topic (optional)</label>
       <select
         value={topicId}
         onChange={(e) => setTopicId(e.target.value)}
-        className="mb-3 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+        className="mb-3 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
       >
         <option value="">Whole subject</option>
         {topics.map((t) => (
@@ -816,7 +816,7 @@ export function AddMaterialModal({
           ref={fileRef}
           type="file"
           accept="application/pdf,.pdf"
-          className="mb-3 block w-full text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-2 file:text-slate-200 hover:file:bg-slate-700"
+          className="mb-3 block w-full text-sm text-fg file:mr-3 file:rounded-lg file:border-0 file:bg-surface-raised file:px-3 file:py-2 file:text-fg hover:file:bg-slate-700"
         />
       )}
       {mode === "text" && (
@@ -825,7 +825,7 @@ export function AddMaterialModal({
           onChange={(e) => setText(e.target.value)}
           rows={6}
           placeholder="Paste notes, an article, definitions, or any reference text…"
-          className="mb-3 w-full resize-none rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+          className="mb-3 w-full resize-none rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
         />
       )}
       {mode === "url" && (
@@ -834,14 +834,14 @@ export function AddMaterialModal({
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://en.wikipedia.org/wiki/…"
-            className="mb-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+            className="mb-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
           />
-          <label className="mb-2 flex items-center gap-2 text-sm text-slate-300">
+          <label className="mb-2 flex items-center gap-2 text-sm text-fg">
             <input type="checkbox" checked={crawl} onChange={(e) => setCrawl(e.target.checked)} className="accent-indigo-500" />
             Crawl linked pages on the same site
           </label>
           {crawl && (
-            <div className="mb-3 flex items-center gap-2 text-xs text-slate-400">
+            <div className="mb-3 flex items-center gap-2 text-xs text-fg-muted">
               <span>Max pages</span>
               <input
                 type="number"
@@ -849,9 +849,9 @@ export function AddMaterialModal({
                 max={150}
                 value={maxPages}
                 onChange={(e) => setMaxPages(Math.max(1, Math.min(150, Number(e.target.value) || 1)))}
-                className="w-20 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 outline-none focus:border-indigo-500"
+                className="w-20 rounded-lg border border-border bg-surface px-2 py-1 outline-none focus:border-accent"
               />
-              <span className="text-slate-500">same domain only · respects robots.txt · max 150</span>
+              <span className="text-fg-subtle">same domain only · respects robots.txt · max 150</span>
             </div>
           )}
         </>
@@ -860,7 +860,7 @@ export function AddMaterialModal({
       <button
         onClick={mode === "pdf" ? upload : submitTextOrUrl}
         disabled={busy}
-        className="mb-4 w-full rounded-lg bg-indigo-600 py-2 text-sm font-medium hover:bg-indigo-500 disabled:opacity-50"
+        className="mb-4 w-full rounded-lg bg-accent py-2 text-sm font-medium hover:bg-accent-hover disabled:opacity-50"
       >
         {busy
           ? mode === "url"
@@ -879,7 +879,7 @@ export function AddMaterialModal({
 
       {sources.length > 0 && (
         <>
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Ingested material</h4>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Ingested material</h4>
           <ul className="space-y-2">
             {sources.map((s) => {
               const inProgress = ACTIVE_STATUSES.includes(s.status);
@@ -890,14 +890,14 @@ export function AddMaterialModal({
                     ? Math.round((s.embeddedCount / s.chunkCount) * 100)
                     : null;
               return (
-                <li key={s.id} className="rounded-lg border border-slate-800 p-2.5 text-xs">
+                <li key={s.id} className="rounded-lg border border-border p-2.5 text-xs">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="truncate font-medium text-slate-200" title={s.name}>
+                    <span className="truncate font-medium text-fg" title={s.name}>
                       {s.name}
                     </span>
                     <StatusBadge status={s.status} />
                   </div>
-                  <div className="mt-1 text-slate-500">
+                  <div className="mt-1 text-fg-subtle">
                     {topicName(s.topicId) ? `${topicName(s.topicId)} · ` : ""}
                     {s.status === "pending"
                       ? "queued…"
@@ -912,10 +912,10 @@ export function AddMaterialModal({
                               : s.error || "failed"}
                   </div>
                   {(inProgress || s.status === "done") && (
-                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
                       <div
                         className={`h-full ${
-                          s.status === "done" ? "bg-emerald-500" : "bg-indigo-500"
+                          s.status === "done" ? "bg-emerald-500" : "bg-accent"
                         } ${pct === null ? "w-1/3 animate-pulse" : "transition-all duration-300"}`}
                         style={pct === null ? undefined : { width: `${pct}%` }}
                       />
@@ -933,7 +933,7 @@ export function AddMaterialModal({
 
 function StatusBadge({ status }: { status: Source["status"] }) {
   const map: Record<Source["status"], string> = {
-    pending: "bg-slate-700 text-slate-300",
+    pending: "bg-slate-700 text-fg",
     extracting: "bg-sky-500/15 text-sky-300",
     crawling: "bg-violet-500/15 text-violet-300",
     embedding: "bg-amber-500/15 text-amber-300",

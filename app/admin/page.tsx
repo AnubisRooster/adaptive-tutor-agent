@@ -52,16 +52,16 @@ export default function AdminPage() {
   }, []);
 
   if (authorized === null) {
-    return <div className="flex min-h-screen items-center justify-center text-slate-400">Loading…</div>;
+    return <div className="flex min-h-screen items-center justify-center text-fg-muted">Loading…</div>;
   }
   if (!authorized) {
     return (
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
         <h1 className="text-xl font-bold">Admin only</h1>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-fg-muted">
           You must be signed in as an admin profile to view this page. Sign in as your admin profile (with its PIN), then return here.
         </p>
-        <button onClick={() => router.push("/")} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500">
+        <button onClick={() => router.push("/")} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium hover:bg-accent-hover">
           Go to profiles
         </button>
       </div>
@@ -73,20 +73,20 @@ export default function AdminPage() {
       <header className="mb-6 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Admin portal</h1>
-          <p className="text-sm text-slate-400">View profiles, curate curriculum, and manage the knowledge base.</p>
+          <p className="text-sm text-fg-muted">View profiles, curate curriculum, and manage the knowledge base.</p>
         </div>
-        <button onClick={() => router.push("/learn")} className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800">
+        <button onClick={() => router.push("/learn")} className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-raised">
           ← Back to learning
         </button>
       </header>
 
-      <div className="mb-6 flex gap-1 border-b border-slate-800">
+      <div className="mb-6 flex gap-1 border-b border-border">
         {(["profiles", "curriculum", "knowledge"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`rounded-t-lg px-4 py-2 text-sm font-medium capitalize transition ${
-              tab === t ? "border-b-2 border-indigo-500 text-white" : "text-slate-400 hover:text-slate-200"
+              tab === t ? "border-b-2 border-indigo-500 text-white" : "text-fg-muted hover:text-fg"
             }`}
           >
             {t}
@@ -123,9 +123,9 @@ function ProfilesTab() {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-800">
+    <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-full min-w-[680px] text-sm">
-        <thead className="bg-slate-900/60 text-left text-xs uppercase tracking-wider text-slate-500">
+        <thead className="bg-surface-muted/60 text-left text-xs uppercase tracking-wider text-fg-subtle">
           <tr>
             <th className="px-4 py-2">Profile</th>
             <th className="px-4 py-2">Subjects</th>
@@ -141,7 +141,7 @@ function ProfilesTab() {
             <Fragment key={p.id}>
               <tr
                 onClick={() => openProfile(p.id)}
-                className="cursor-pointer border-t border-slate-800 hover:bg-slate-900/40"
+                className="cursor-pointer border-t border-border hover:bg-surface-muted/40"
               >
                 <td className="px-4 py-2.5">
                   <span className="flex items-center gap-2">
@@ -153,18 +153,18 @@ function ProfilesTab() {
                     {p.hasPin && <span title="PIN protected">🔒</span>}
                   </span>
                 </td>
-                <td className="px-4 py-2.5 text-slate-300">{p.subjectsTouched}</td>
-                <td className="px-4 py-2.5 text-slate-300">{p.topicsMastered}/{p.topicsAttempted}</td>
-                <td className="px-4 py-2.5 text-slate-300">{pct(p.avgMastery)}</td>
-                <td className="px-4 py-2.5 text-slate-300">{p.totalCorrect}/{p.totalAttempts}</td>
-                <td className="px-4 py-2.5 text-slate-300">{p.openGaps}</td>
-                <td className="px-4 py-2.5 text-slate-400">{fmtDate(p.lastActiveAt)}</td>
+                <td className="px-4 py-2.5 text-fg">{p.subjectsTouched}</td>
+                <td className="px-4 py-2.5 text-fg">{p.topicsMastered}/{p.topicsAttempted}</td>
+                <td className="px-4 py-2.5 text-fg">{pct(p.avgMastery)}</td>
+                <td className="px-4 py-2.5 text-fg">{p.totalCorrect}/{p.totalAttempts}</td>
+                <td className="px-4 py-2.5 text-fg">{p.openGaps}</td>
+                <td className="px-4 py-2.5 text-fg-muted">{fmtDate(p.lastActiveAt)}</td>
               </tr>
               {openId === p.id && (
-                <tr className="border-t border-slate-800 bg-slate-950/60">
+                <tr className="border-t border-border bg-surface/60">
                   <td colSpan={7} className="px-4 py-4">
                     {!detail ? (
-                      <p className="text-slate-400">Loading detail…</p>
+                      <p className="text-fg-muted">Loading detail…</p>
                     ) : (
                       <ProfileDetailView detail={detail} />
                     )}
@@ -175,7 +175,7 @@ function ProfilesTab() {
           ))}
           {profiles.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-4 py-6 text-center text-slate-500">No profiles yet.</td>
+              <td colSpan={7} className="px-4 py-6 text-center text-fg-subtle">No profiles yet.</td>
             </tr>
           )}
         </tbody>
@@ -187,25 +187,25 @@ function ProfilesTab() {
 function ProfileDetailView({ detail }: { detail: ProfileDetail }) {
   return (
     <div className="space-y-4">
-      <div className="text-xs text-slate-400">
+      <div className="text-xs text-fg-muted">
         Created {fmtDate(detail.profile.createdAt)} · {detail.sessionCount} sessions · {detail.messageCount} messages
       </div>
       <ChatHistory studentId={detail.profile.id} sessionCount={detail.sessionCount} messageCount={detail.messageCount} />
       {detail.subjects.length === 0 ? (
-        <p className="text-sm text-slate-500">No learning activity yet.</p>
+        <p className="text-sm text-fg-subtle">No learning activity yet.</p>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {detail.subjects.map((s) => (
-            <div key={s.id} className="rounded-lg border border-slate-800 p-3">
+            <div key={s.id} className="rounded-lg border border-border p-3">
               <h4 className="mb-2 text-sm font-semibold">{s.name}</h4>
               <ul className="space-y-1.5">
                 {s.topics.map((t) => (
                   <li key={t.id} className="text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-300">{t.name}</span>
-                      <span className="text-slate-400">L{t.bloomLevel} · {pct(t.mastery)} · {t.correct}/{t.attempts}</span>
+                      <span className="text-fg">{t.name}</span>
+                      <span className="text-fg-muted">L{t.bloomLevel} · {pct(t.mastery)} · {t.correct}/{t.attempts}</span>
                     </div>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
                       <div className={`h-full ${t.mastery >= 0.8 ? "bg-emerald-500" : "bg-indigo-500"}`} style={{ width: pct(t.mastery) }} />
                     </div>
                   </li>
@@ -217,7 +217,7 @@ function ProfileDetailView({ detail }: { detail: ProfileDetail }) {
       )}
       {detail.gaps.length > 0 && (
         <div>
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Open gaps ({detail.gaps.length})</h4>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Open gaps ({detail.gaps.length})</h4>
           <ul className="space-y-1.5">
             {detail.gaps.map((g) => (
               <li key={g.id} className="rounded-lg bg-amber-500/10 p-2 text-xs text-amber-200">
@@ -262,42 +262,42 @@ function ChatHistory({ studentId, sessionCount, messageCount }: { studentId: str
   }
 
   return (
-    <div className="rounded-lg border border-slate-800">
+    <div className="rounded-lg border border-border">
       <button
         onClick={toggle}
-        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-200"
+        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-fg-muted hover:text-fg"
       >
         <span>Chat history</span>
-        <span className="flex items-center gap-2 normal-case tracking-normal text-slate-500">
+        <span className="flex items-center gap-2 normal-case tracking-normal text-fg-subtle">
           {sessionCount} sessions · {messageCount} messages
           <span className={`transition-transform ${open ? "rotate-90" : ""}`}>›</span>
         </span>
       </button>
       {open && (
-        <div className="border-t border-slate-800 p-3">
+        <div className="border-t border-border p-3">
           {loading ? (
-            <p className="text-sm text-slate-500">Loading transcript…</p>
+            <p className="text-sm text-fg-subtle">Loading transcript…</p>
           ) : !chats || chats.sessions.length === 0 ? (
-            <p className="text-sm text-slate-500">No chat messages yet.</p>
+            <p className="text-sm text-fg-subtle">No chat messages yet.</p>
           ) : (
             <div className="space-y-2">
               {chats.sessions.map((s) => {
                 const expanded = openSessions.has(s.id);
                 return (
-                  <div key={s.id} className="rounded-lg border border-slate-800 bg-slate-950/40">
+                  <div key={s.id} className="rounded-lg border border-border bg-surface/40">
                     <button
                       onClick={() => toggleSession(s.id)}
-                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-slate-900/40"
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-surface-muted/40"
                     >
                       <span className="flex items-center gap-2">
-                        <span className={`text-slate-500 transition-transform ${expanded ? "rotate-90" : ""}`}>›</span>
-                        <span className="font-medium text-slate-200">{s.subjectName}</span>
-                        <span className="text-slate-500">{s.messageCount} messages</span>
+                        <span className={`text-fg-subtle transition-transform ${expanded ? "rotate-90" : ""}`}>›</span>
+                        <span className="font-medium text-fg">{s.subjectName}</span>
+                        <span className="text-fg-subtle">{s.messageCount} messages</span>
                       </span>
-                      <span className="text-slate-500">{fmtDate(s.lastActiveAt)}</span>
+                      <span className="text-fg-subtle">{fmtDate(s.lastActiveAt)}</span>
                     </button>
                     {expanded && (
-                      <div className="space-y-2 border-t border-slate-800 px-3 py-3">
+                      <div className="space-y-2 border-t border-border px-3 py-3">
                         {s.messages.length === 0 ? (
                           <p className="text-xs text-slate-600">No messages in this session.</p>
                         ) : (
@@ -321,7 +321,7 @@ function ChatBubble({ m }: { m: ChatMessage }) {
   const isSystem = m.role === "system";
   if (isSystem) {
     return (
-      <div className="rounded-md border border-slate-800 bg-slate-900/40 px-2.5 py-1.5 text-[11px] text-slate-500">
+      <div className="rounded-md border border-border bg-surface-muted/40 px-2.5 py-1.5 text-[11px] text-fg-subtle">
         <span className="font-semibold uppercase tracking-wider">system</span> · {m.content}
       </div>
     );
@@ -330,10 +330,10 @@ function ChatBubble({ m }: { m: ChatMessage }) {
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${
-          isUser ? "bg-indigo-600/20 text-indigo-100" : "bg-slate-800/70 text-slate-200"
+          isUser ? "bg-accent/20 text-indigo-100" : "bg-surface-raised/70 text-fg"
         }`}
       >
-        <div className="mb-1 flex items-center gap-2 text-[10px] text-slate-400">
+        <div className="mb-1 flex items-center gap-2 text-[10px] text-fg-muted">
           <span className="font-semibold uppercase tracking-wider">{isUser ? "student" : "tutor"}</span>
           {m.topicName && <span className="rounded bg-slate-700/60 px-1.5 py-0.5">{m.topicName}</span>}
           <span>{fmtDate(m.createdAt)}</span>
@@ -405,22 +405,22 @@ function CurriculumTab() {
     <div className="space-y-4">
       {msg && <p className="text-sm text-emerald-400">{msg}</p>}
       {subjects.map((s) => (
-        <div key={s.id} className="rounded-xl border border-slate-800 p-4">
+        <div key={s.id} className="rounded-xl border border-border p-4">
           <div className="flex flex-wrap items-center gap-2">
             <input
               value={s.name}
               onChange={(e) => patchSubject(s.id, { name: e.target.value })}
-              className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm font-semibold outline-none focus:border-indigo-500"
+              className="flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold outline-none focus:border-accent"
             />
-            <label className="text-xs text-slate-500">order</label>
+            <label className="text-xs text-fg-subtle">order</label>
             <input
               type="number"
               value={s.orderIndex}
               onChange={(e) => patchSubject(s.id, { orderIndex: Number(e.target.value) })}
-              className="w-16 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm outline-none focus:border-indigo-500"
+              className="w-16 rounded-lg border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent"
             />
-            <span className="text-xs text-slate-500">{s.chunkCount} chunks · {s.sourceCount} sources · {s.topics.length} topics</span>
-            <button onClick={() => saveSubject(s)} disabled={busy} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium hover:bg-indigo-500 disabled:opacity-50">Save</button>
+            <span className="text-xs text-fg-subtle">{s.chunkCount} chunks · {s.sourceCount} sources · {s.topics.length} topics</span>
+            <button onClick={() => saveSubject(s)} disabled={busy} className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium hover:bg-accent-hover disabled:opacity-50">Save</button>
             <button onClick={() => deleteSubject(s)} className="rounded-lg border border-rose-700/60 px-3 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10">Delete</button>
           </div>
           <textarea
@@ -428,32 +428,32 @@ function CurriculumTab() {
             onChange={(e) => patchSubject(s.id, { description: e.target.value })}
             rows={1}
             placeholder="Description"
-            className="mt-2 w-full resize-none rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs outline-none focus:border-indigo-500"
+            className="mt-2 w-full resize-none rounded-lg border border-border bg-surface px-3 py-1.5 text-xs outline-none focus:border-accent"
           />
           <textarea
             value={s.framing}
             onChange={(e) => patchSubject(s.id, { framing: e.target.value })}
             rows={2}
             placeholder="Teaching framing (guides the tutor)"
-            className="mt-2 w-full resize-none rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-300 outline-none focus:border-indigo-500"
+            className="mt-2 w-full resize-none rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-fg outline-none focus:border-accent"
           />
 
-          <div className="mt-3 space-y-2 border-t border-slate-800 pt-3">
+          <div className="mt-3 space-y-2 border-t border-border pt-3">
             {s.topics.map((t) => (
-              <div key={t.id} className="rounded-lg border border-slate-800 p-2.5">
+              <div key={t.id} className="rounded-lg border border-border p-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <input
                     value={t.name}
                     onChange={(e) => patchTopic(s.id, t.id, { name: e.target.value })}
-                    className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-sm outline-none focus:border-indigo-500"
+                    className="flex-1 rounded-lg border border-border bg-surface px-2 py-1 text-sm outline-none focus:border-accent"
                   />
                   <input
                     type="number"
                     value={t.orderIndex}
                     onChange={(e) => patchTopic(s.id, t.id, { orderIndex: Number(e.target.value) })}
-                    className="w-14 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-xs outline-none focus:border-indigo-500"
+                    className="w-14 rounded-lg border border-border bg-surface px-2 py-1 text-xs outline-none focus:border-accent"
                   />
-                  <span className="text-[11px] text-slate-500">{t.chunkCount} chunks</span>
+                  <span className="text-[11px] text-fg-subtle">{t.chunkCount} chunks</span>
                   <button onClick={() => saveTopic(t)} className="rounded-lg bg-slate-700 px-2.5 py-1 text-xs hover:bg-slate-600">Save</button>
                   <button onClick={() => deleteTopic(t)} className="rounded-lg border border-rose-700/60 px-2.5 py-1 text-xs text-rose-300 hover:bg-rose-500/10">Delete</button>
                 </div>
@@ -462,10 +462,10 @@ function CurriculumTab() {
                   onChange={(e) => patchTopic(s.id, t.id, { description: e.target.value })}
                   rows={1}
                   placeholder="Topic description"
-                  className="mt-2 w-full resize-none rounded-lg border border-slate-800 bg-slate-950 px-2 py-1 text-xs outline-none focus:border-indigo-500"
+                  className="mt-2 w-full resize-none rounded-lg border border-border bg-surface px-2 py-1 text-xs outline-none focus:border-accent"
                 />
                 <div className="mt-2">
-                  <span className="text-[11px] uppercase tracking-wider text-slate-500">Prerequisites</span>
+                  <span className="text-[11px] uppercase tracking-wider text-fg-subtle">Prerequisites</span>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {s.topics.filter((o) => o.id !== t.id).map((o) => {
                       const on = t.prerequisites.includes(o.id);
@@ -478,7 +478,7 @@ function CurriculumTab() {
                             })
                           }
                           className={`rounded-full px-2 py-0.5 text-[11px] transition ${
-                            on ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                            on ? "bg-accent text-white" : "bg-surface-raised text-fg-muted hover:bg-slate-700"
                           }`}
                         >
                           {o.name}
@@ -602,28 +602,28 @@ function KnowledgeTab() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <select value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setTopicFilter(""); }} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm outline-none focus:border-indigo-500">
+        <select value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setTopicFilter(""); }} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-accent">
           {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm outline-none focus:border-indigo-500">
+        <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-accent">
           <option value="">All topics</option>
           <option value="__none">Subject-level (no topic)</option>
           {subject?.topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+      <div className="rounded-xl border border-border bg-surface-muted/40 p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
             Add knowledge to {subject?.name ?? "subject"}
           </h3>
-          <div className="flex gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1 text-xs">
+          <div className="flex gap-1 rounded-lg border border-border bg-surface/60 p-1 text-xs">
             {(["text", "url"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => { setAddMode(m); setAddError(null); }}
                 className={`rounded-md px-3 py-1 transition ${
-                  addMode === m ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
+                  addMode === m ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
                 }`}
               >
                 {m === "url" ? "Web URL" : "Paste text"}
@@ -634,7 +634,7 @@ function KnowledgeTab() {
         <select
           value={addTopicId}
           onChange={(e) => setAddTopicId(e.target.value)}
-          className="mb-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm outline-none focus:border-indigo-500"
+          className="mb-2 w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-accent"
         >
           <option value="">Whole subject (no topic)</option>
           {subject?.topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -645,7 +645,7 @@ function KnowledgeTab() {
             onChange={(e) => setAddText(e.target.value)}
             rows={5}
             placeholder="Paste notes, definitions, an article, or any reference text…"
-            className="w-full resize-none rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+            className="w-full resize-none rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
           />
         ) : (
           <>
@@ -653,14 +653,14 @@ function KnowledgeTab() {
               value={addUrl}
               onChange={(e) => setAddUrl(e.target.value)}
               placeholder="https://en.wikipedia.org/wiki/…"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
             />
-            <label className="mt-2 flex items-center gap-2 text-sm text-slate-300">
+            <label className="mt-2 flex items-center gap-2 text-sm text-fg">
               <input type="checkbox" checked={addCrawl} onChange={(e) => setAddCrawl(e.target.checked)} className="accent-indigo-500" />
               Crawl linked pages on the same site
             </label>
             {addCrawl && (
-              <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+              <div className="mt-1 flex items-center gap-2 text-xs text-fg-muted">
                 <span>Max pages</span>
                 <input
                   type="number"
@@ -668,9 +668,9 @@ function KnowledgeTab() {
                   max={150}
                   value={addMaxPages}
                   onChange={(e) => setAddMaxPages(Math.max(1, Math.min(150, Number(e.target.value) || 1)))}
-                  className="w-20 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 outline-none focus:border-indigo-500"
+                  className="w-20 rounded-lg border border-border bg-surface px-2 py-1 outline-none focus:border-accent"
                 />
-                <span className="text-slate-500">same domain only · respects robots.txt · max 150</span>
+                <span className="text-fg-subtle">same domain only · respects robots.txt · max 150</span>
               </div>
             )}
           </>
@@ -680,7 +680,7 @@ function KnowledgeTab() {
           <button
             onClick={addKnowledge}
             disabled={addBusy || !subjectId}
-            className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium hover:bg-indigo-500 disabled:opacity-50"
+            className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium hover:bg-accent-hover disabled:opacity-50"
           >
             {addBusy
               ? addMode === "url"
@@ -696,16 +696,16 @@ function KnowledgeTab() {
       </div>
 
       <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Sources ({sources.length})</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Sources ({sources.length})</h3>
         {sources.length === 0 ? (
-          <p className="text-sm text-slate-500">No ingested sources for this subject.</p>
+          <p className="text-sm text-fg-subtle">No ingested sources for this subject.</p>
         ) : (
           <ul className="space-y-2">
             {sources.map((s) => (
-              <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800 p-2.5 text-xs">
-                <span className="min-w-0 flex-1 truncate font-medium text-slate-200" title={s.name}>{s.name}</span>
-                <span className="text-slate-400">{topicName(s.topicId)}</span>
-                <span className="text-slate-400">{s.status} · {s.embeddedCount}/{s.chunkCount} embedded</span>
+              <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-2.5 text-xs">
+                <span className="min-w-0 flex-1 truncate font-medium text-fg" title={s.name}>{s.name}</span>
+                <span className="text-fg-muted">{topicName(s.topicId)}</span>
+                <span className="text-fg-muted">{s.status} · {s.embeddedCount}/{s.chunkCount} embedded</span>
                 <span className="flex gap-1.5">
                   <button onClick={() => reembed(s.id)} disabled={busy} className="rounded-lg bg-slate-700 px-2.5 py-1 hover:bg-slate-600 disabled:opacity-50">Re-embed</button>
                   <button onClick={() => delSource(s)} className="rounded-lg border border-rose-700/60 px-2.5 py-1 text-rose-300 hover:bg-rose-500/10">Delete</button>
@@ -717,21 +717,21 @@ function KnowledgeTab() {
       </div>
 
       <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Knowledge chunks ({chunks.length})</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Knowledge chunks ({chunks.length})</h3>
         {chunks.length === 0 ? (
-          <p className="text-sm text-slate-500">No chunks for this selection.</p>
+          <p className="text-sm text-fg-subtle">No chunks for this selection.</p>
         ) : (
           <ul className="space-y-2">
             {chunks.map((c) => (
-              <li key={c.id} className="rounded-lg border border-slate-800 p-2.5 text-xs">
+              <li key={c.id} className="rounded-lg border border-border p-2.5 text-xs">
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="text-slate-400">
+                  <span className="text-fg-muted">
                     {topicName(c.topicId)} · {c.source || "seed"} · {c.length} chars
                     <span className={`ml-2 ${c.embedded ? "text-emerald-400" : "text-amber-400"}`}>{c.embedded ? "embedded" : "no embedding"}</span>
                   </span>
                   <button onClick={() => delChunk(c.id)} className="rounded-lg border border-rose-700/60 px-2.5 py-1 text-rose-300 hover:bg-rose-500/10">Delete</button>
                 </div>
-                <p className="whitespace-pre-wrap text-slate-300">{c.preview}{c.length > c.preview.length ? "…" : ""}</p>
+                <p className="whitespace-pre-wrap text-fg">{c.preview}{c.length > c.preview.length ? "…" : ""}</p>
               </li>
             ))}
           </ul>

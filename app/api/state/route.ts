@@ -34,6 +34,11 @@ export async function GET() {
         bloomLevel: m?.bloomLevel ?? 1,
         attempts: m?.attempts ?? 0,
         unlocked,
+        phase: m?.phase ?? "learn",
+        // Parse once here; already stored as JSON string in DB.
+        progress: (() => {
+          try { return JSON.parse(m?.progress ?? "{}"); } catch { return {}; }
+        })(),
       };
     });
     const avg = topics.length
@@ -66,6 +71,7 @@ export async function GET() {
       isAdmin: student.isAdmin,
       pacePref: student.pacePref,
       tonePref: student.tonePref,
+      themePref: student.themePref ?? "system",
     },
     subjects,
     gaps,

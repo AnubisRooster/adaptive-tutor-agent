@@ -1,7 +1,7 @@
 import { getActiveStudent } from "@/lib/session";
 import { buildTutorTurn } from "@/lib/orchestrator";
 import { streamChat } from "@/lib/ollama";
-import { getOrCreateSession, addMessage } from "@/lib/data";
+import { getOrCreateSession, addMessage, markSubtopicTaught } from "@/lib/data";
 import type { TutorMode } from "@/lib/prompts";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +45,12 @@ export async function POST(req: Request) {
     built = await buildTutorTurn({ studentId: student.id, subjectId, topicId, mode, history, focus });
   } catch (err) {
     return new Response(err instanceof Error ? err.message : "Failed to start tutor.", { status: 400 });
+  }
+
+  // When the tutor teaches a specific sub-area, mark it taught immediately
+  // (before the response finishes) so the progress bar advances right away.
+  if (mode === "teach" && focus?.name) {
+    markSubtopicTaught(student.id, topicId, focus.name);
   }
 
   const encoder = new TextEncoder();
