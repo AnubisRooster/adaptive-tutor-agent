@@ -102,9 +102,38 @@ async function ensureOllama() {
   warn("Could not reach Ollama. The app will still open, but the tutor won't respond until Ollama is running.");
 }
 
+async function ensureNativeModules() {
+  // Probe the native SQLite addon. If Node.js was updated since the last
+  // `npm install`, the pre-built binary will have the wrong MODULE_VERSION and
+  // throw ERR_DLOPEN_FAILED. Detect that and auto-rebuild before we try to
+  // start the server (which would crash immediately and confusingly otherwise).
+  const addonPath = path.join(ROOT, "node_modules", "better-sqlite3", "build", "Release", "better_sqlite3.node");
+  if (!existsSync(addonPath)) return; // not yet installed — npm install will handle it
+  try {
+    // createRequire lets us require() from ESM without a top-level import.
+    const { createRequire } = await import("node:module");
+    createRequire(import.meta.url)(addonPath);
+  } catch (err) {
+    if (err?.code === "ERR_DLOPEN_FAILED" || String(err).includes("NODE_MODULE_VERSION")) {
+      warn("Native module mismatch detected (Node.js was updated). Rebuilding…");
+      await run(npmCmd, ["rebuild"]);
+      ok("Native modules rebuilt.");
+      // The existing .next build also needs to be invalidated so Next.js picks
+      // up the freshly-linked addon on its first server request.
+      const buildId = path.join(ROOT, ".next", "BUILD_ID");
+      if (existsSync(buildId)) {
+        const { unlinkSync } = await import("node:fs");
+        try { unlinkSync(buildId); } catch { /* already gone */ }
+      }
+    } else {
+      throw err;
+    }
+  }
+}
+
 async function ensureBuild() {
   if (existsSync(path.join(ROOT, ".next", "BUILD_ID"))) return;
-  log("No production build found — building now (one-time, ~30s)…");
+  log("No production build found — building now (~60s)…");
   await run(npmCmd, ["run", "build"]);
   ok("Build complete.");
 }
@@ -145,6 +174,7 @@ async function waitForHealthThenOpen() {
 async function main() {
   console.log("\n\x1b[1mAdaptive Tutor — launcher\x1b[0m\n");
   await ensureOllama();
+  await ensureNativeModules(); // must run before ensureBuild (may invalidate old build)
   await ensureBuild();
   await ensureDb();
 
