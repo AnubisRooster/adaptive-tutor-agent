@@ -1,5 +1,6 @@
 import { Ollama } from "ollama";
-import { loadEnv, ollamaHost, tutorModel, embedModel, numCtx } from "./config";
+import { loadEnv, ollamaHost, tutorModel, embedModel, numCtx, numPredict } from "./config";
+import { getSystemSetting } from "./data";
 
 loadEnv();
 
@@ -8,6 +9,19 @@ const globalForOllama = globalThis as unknown as { __ollama?: Ollama };
 export const ollama =
   globalForOllama.__ollama ?? new Ollama({ host: ollamaHost() });
 if (process.env.NODE_ENV !== "production") globalForOllama.__ollama = ollama;
+
+/**
+ * Returns the active tutor model. Checks the DB system_settings first so the
+ * model can be changed from the admin UI without restarting the server, falling
+ * back to the TUTOR_MODEL env var (or the compiled-in default).
+ */
+export function activeTutorModel(): string {
+  try {
+    return getSystemSetting("tutor_model") ?? tutorModel();
+  } catch {
+    return tutorModel();
+  }
+}
 
 export type OllamaMessage = {
   role: "system" | "user" | "assistant";
@@ -64,10 +78,10 @@ export async function* streamChat(
   opts: { temperature?: number } = {}
 ): AsyncGenerator<string> {
   const stream = await ollama.chat({
-    model: tutorModel(),
+    model: activeTutorModel(),
     messages,
     stream: true,
-    options: { temperature: opts.temperature ?? 0.6, num_ctx: numCtx() },
+    options: { temperature: opts.temperature ?? 0.6, num_ctx: numCtx(), num_predict: numPredict() },
   });
   for await (const part of stream) {
     if (part.message?.content) yield part.message.content;
@@ -84,11 +98,11 @@ export async function* streamStructured(
   opts: { temperature?: number; format?: object } = {}
 ): AsyncGenerator<string> {
   const stream = await ollama.chat({
-    model: tutorModel(),
+    model: activeTutorModel(),
     messages,
     stream: true,
     format: opts.format,
-    options: { temperature: opts.temperature ?? 0.3, num_ctx: numCtx() },
+    options: { temperature: opts.temperature ?? 0.3, num_ctx: numCtx(), num_predict: numPredict() },
   });
   for await (const part of stream) {
     if (part.message?.content) yield part.message.content;
@@ -101,11 +115,11 @@ export async function chatOnce(
   opts: { temperature?: number; format?: object } = {}
 ): Promise<string> {
   const res = await ollama.chat({
-    model: tutorModel(),
+    model: activeTutorModel(),
     messages,
     stream: false,
     format: opts.format,
-    options: { temperature: opts.temperature ?? 0.6, num_ctx: numCtx() },
+    options: { temperature: opts.temperature ?? 0.6, num_ctx: numCtx(), num_predict: numPredict() },
   });
   return res.message.content;
 }

@@ -154,6 +154,12 @@ export const sources = sqliteTable(
   })
 );
 
+// Global server settings (model overrides, etc.) stored as key-value pairs.
+export const systemSettings = sqliteTable("system_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
+
 export type Student = typeof students.$inferSelect;
 export type Subject = typeof subjects.$inferSelect;
 export type Topic = typeof topics.$inferSelect;

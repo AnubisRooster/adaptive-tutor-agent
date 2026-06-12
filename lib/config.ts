@@ -52,7 +52,18 @@ export function embedModel(): string {
  */
 export function numCtx(): number {
   const raw = Number(process.env.OLLAMA_NUM_CTX);
-  return Number.isFinite(raw) && raw > 0 ? raw : 8192;
+  return Number.isFinite(raw) && raw > 0 ? raw : 6144;
+}
+
+/**
+ * Maximum tokens the model will generate per response. Capping this prevents
+ * runaway verbose answers (800+ token lectures) without affecting structured
+ * outputs (quiz/grade/subtopics), which are always much shorter. Override via
+ * OLLAMA_NUM_PREDICT in .env if you need longer responses.
+ */
+export function numPredict(): number {
+  const raw = Number(process.env.OLLAMA_NUM_PREDICT);
+  return Number.isFinite(raw) && raw > 0 ? raw : 512;
 }
 
 export function databasePath(): string {

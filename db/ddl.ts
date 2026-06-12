@@ -90,6 +90,12 @@ CREATE TABLE IF NOT EXISTS knowledge_chunks (
 );
 CREATE INDEX IF NOT EXISTS chunks_by_subject ON knowledge_chunks(subject_id);
 
+-- Global key-value settings (e.g. active tutor model override).
+CREATE TABLE IF NOT EXISTS system_settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
 -- Tracks each ingested document (e.g. an uploaded PDF) so the UI can show
 -- progress/status and chunks can be managed per source.
 CREATE TABLE IF NOT EXISTS sources (

@@ -176,13 +176,27 @@ The tutor is instructed to emit all math/chemistry in this notation, so it rende
 
 ## Configuration (`.env`)
 
-| Variable        | Default                  | Purpose                                  |
-| --------------- | ------------------------ | ---------------------------------------- |
-| `OLLAMA_HOST`   | `http://127.0.0.1:11434` | Where the host reaches Ollama (local).   |
-| `TUTOR_MODEL`   | `gemma4:e4b-it-qat`      | Conversational tutor model (exact tag).  |
-| `EMBED_MODEL`   | `nomic-embed-text`       | Embedding model for RAG.                 |
-| `HOST` / `PORT` | `0.0.0.0` / `3000`       | Server bind address (LAN access).        |
-| `DATABASE_PATH` | `./data/tutor.db`        | SQLite database file (WAL mode).         |
+| Variable             | Default                  | Purpose                                                                 |
+| -------------------- | ------------------------ | ----------------------------------------------------------------------- |
+| `OLLAMA_HOST`        | `http://127.0.0.1:11434` | Where the host reaches Ollama (local).                                  |
+| `TUTOR_MODEL`        | `gemma4:e4b-it-qat`      | Conversational tutor model (exact tag). Can also be changed in the UI.  |
+| `EMBED_MODEL`        | `nomic-embed-text`       | Embedding model for RAG.                                                |
+| `OLLAMA_NUM_CTX`     | `6144`                   | KV-cache context window. Lower = faster; raise if subtopics truncate.   |
+| `OLLAMA_NUM_PREDICT` | `512`                    | Max tokens per response. Raise for very long explanations.              |
+| `HOST` / `PORT`      | `0.0.0.0` / `3000`       | Server bind address (LAN access).                                       |
+| `DATABASE_PATH`      | `./data/tutor.db`        | SQLite database file (WAL mode).                                        |
+
+### Recommended model alternatives (Apple Silicon)
+
+| Model              | Speed vs default | Notes                                   |
+| ------------------ | ---------------- | --------------------------------------- |
+| `qwen2.5:3b`       | ~30% faster      | Very capable for Q&A; great first pick  |
+| `llama3.2:3b`      | ~25% faster      | Strong reasoning, well-rounded          |
+| `phi4-mini`        | ~20% faster      | Small footprint, good at STEM           |
+| `gemma3:4b`        | ~15% faster      | Balanced quality / speed                |
+| `gemma4:e4b-it-qat`| baseline         | Default; good multilingual + science    |
+
+Pull any model with `ollama pull <name>` or from **Admin → Settings → Pull a new model**.
 
 ## Project structure
 

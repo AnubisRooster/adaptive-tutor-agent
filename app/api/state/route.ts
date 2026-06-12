@@ -8,6 +8,7 @@ import {
   getAllTopics,
   topicPrerequisites,
 } from "@/lib/data";
+import { activeTutorModel } from "@/lib/ollama";
 
 export const dynamic = "force-dynamic";
 
@@ -75,5 +76,6 @@ export async function GET() {
     },
     subjects,
     gaps,
+    activeModel: activeTutorModel(),
   });
 }

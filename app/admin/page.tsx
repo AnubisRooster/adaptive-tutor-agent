@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Tab = "profiles" | "curriculum" | "knowledge";
+type Tab = "profiles" | "curriculum" | "knowledge" | "settings";
 
 type ProfileSummary = {
   id: string;
@@ -45,7 +45,9 @@ const pct = (m: number) => `${Math.round(m * 100)}%`;
 export default function AdminPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<Tab>("profiles");
+  const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const defaultTab = (params?.get("tab") as Tab | null) ?? "profiles";
+  const [tab, setTab] = useState<Tab>(defaultTab);
 
   useEffect(() => {
     fetch("/api/admin/profiles").then((r) => setAuthorized(r.ok));
@@ -81,7 +83,7 @@ export default function AdminPage() {
       </header>
 
       <div className="mb-6 flex gap-1 border-b border-border">
-        {(["profiles", "curriculum", "knowledge"] as Tab[]).map((t) => (
+        {(["profiles", "curriculum", "knowledge", "settings"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -97,6 +99,7 @@ export default function AdminPage() {
       {tab === "profiles" && <ProfilesTab />}
       {tab === "curriculum" && <CurriculumTab />}
       {tab === "knowledge" && <KnowledgeTab />}
+      {tab === "settings" && <SettingsTab />}
     </div>
   );
 }
@@ -737,6 +740,230 @@ function KnowledgeTab() {
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+// ---------- Settings Tab ----------
+
+const SUGGESTED_MODELS = [
+  { id: "qwen2.5:3b", label: "Qwen 2.5 3B", note: "Fastest — great for Q&A" },
+  { id: "llama3.2:3b", label: "Llama 3.2 3B", note: "Very fast, strong reasoning" },
+  { id: "phi4-mini", label: "Phi-4 Mini", note: "Small but capable" },
+  { id: "gemma3:4b", label: "Gemma 3 4B", note: "Balanced quality/speed" },
+  { id: "gemma4:e4b-it-qat", label: "Gemma4 E4B QAT", note: "Current default" },
+];
+
+function SettingsTab() {
+  const [models, setModels] = useState<string[]>([]);
+  const [active, setActive] = useState<string>("");
+  const [loadingModels, setLoadingModels] = useState(true);
+  const [settingModel, setSettingModel] = useState(false);
+
+  const [pullModel, setPullModel] = useState("");
+  const [pullLog, setPullLog] = useState<string[]>([]);
+  const [pullPercent, setPullPercent] = useState<number | null>(null);
+  const [pulling, setPulling] = useState(false);
+  const [pullDone, setPullDone] = useState(false);
+
+  const loadModels = useCallback(async () => {
+    setLoadingModels(true);
+    try {
+      const res = await fetch("/api/admin/models");
+      if (res.ok) {
+        const d = await res.json();
+        setModels(d.models ?? []);
+        setActive(d.active ?? "");
+      }
+    } finally {
+      setLoadingModels(false);
+    }
+  }, []);
+
+  useEffect(() => { loadModels(); }, [loadModels]);
+
+  async function selectModel(model: string) {
+    setSettingModel(true);
+    try {
+      await fetch("/api/admin/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model }),
+      });
+      setActive(model);
+    } finally {
+      setSettingModel(false);
+    }
+  }
+
+  async function startPull() {
+    const m = pullModel.trim();
+    if (!m) return;
+    setPulling(true);
+    setPullDone(false);
+    setPullLog([`Pulling ${m}…`]);
+    setPullPercent(null);
+
+    const res = await fetch("/api/admin/models/pull", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: m }),
+    });
+    if (!res.ok || !res.body) {
+      setPullLog((prev) => [...prev, `Error: ${res.statusText}`]);
+      setPulling(false);
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const ev = JSON.parse(line) as { status: string; percent?: number | null; error?: string };
+          if (ev.status === "done") {
+            setPullLog((prev) => [...prev, "Done!"]);
+            setPullDone(true);
+            setPullPercent(100);
+            await loadModels();
+          } else if (ev.status === "error") {
+            setPullLog((prev) => [...prev, `Error: ${ev.error ?? "unknown"}`]);
+          } else {
+            if (ev.percent != null) {
+              setPullPercent(ev.percent);
+              setPullLog((prev) => {
+                const next = [...prev];
+                next[next.length - 1] = `${ev.status} ${ev.percent}%`;
+                return next;
+              });
+            } else {
+              setPullLog((prev) => {
+                const last = prev[prev.length - 1];
+                if (last === ev.status) return prev;
+                return [...prev, ev.status];
+              });
+            }
+          }
+        } catch { /* ignore malformed lines */ }
+      }
+    }
+    setPulling(false);
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Active model selector */}
+      <section className="rounded-xl border border-border bg-surface p-5">
+        <h2 className="mb-1 text-base font-semibold">Active tutor model</h2>
+        <p className="mb-4 text-sm text-fg-muted">
+          The model used for all chat, quiz, and curriculum generation. Changes take effect immediately — no restart needed.
+        </p>
+        {loadingModels ? (
+          <p className="text-sm text-fg-subtle">Loading…</p>
+        ) : models.length === 0 ? (
+          <p className="text-sm text-fg-subtle">No models pulled yet. Pull one below.</p>
+        ) : (
+          <ul className="space-y-2">
+            {models.map((m) => (
+              <li key={m} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+                <span className="flex items-center gap-2 font-mono text-sm">
+                  {m === active && <span className="h-2 w-2 rounded-full bg-emerald-400" />}
+                  {m !== active && <span className="h-2 w-2 rounded-full bg-transparent border border-border" />}
+                  {m}
+                </span>
+                {m !== active && (
+                  <button
+                    disabled={settingModel}
+                    onClick={() => selectModel(m)}
+                    className="rounded-lg border border-indigo-600/50 bg-indigo-500/10 px-3 py-1 text-xs text-indigo-300 hover:bg-indigo-500/20 disabled:opacity-50"
+                  >
+                    Use this
+                  </button>
+                )}
+                {m === active && (
+                  <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs text-emerald-400">Active</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Quick-pick suggestions */}
+      <section className="rounded-xl border border-border bg-surface p-5">
+        <h2 className="mb-1 text-base font-semibold">Suggested models</h2>
+        <p className="mb-4 text-sm text-fg-muted">
+          Click a model to pre-fill the pull field. Smaller models are faster on Apple Silicon but may give shorter answers.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {SUGGESTED_MODELS.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setPullModel(s.id)}
+              title={s.note}
+              className="rounded-full border border-border px-3 py-1 text-xs hover:bg-surface-raised"
+            >
+              {s.label}
+              <span className="ml-1 text-fg-subtle">— {s.note}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Pull new model */}
+      <section className="rounded-xl border border-border bg-surface p-5">
+        <h2 className="mb-1 text-base font-semibold">Pull a new model</h2>
+        <p className="mb-4 text-sm text-fg-muted">
+          Enter any Ollama model name (e.g. <code className="rounded bg-surface-raised px-1 text-xs">qwen2.5:3b</code>) and click Pull. Large models may take several minutes.
+        </p>
+        <div className="flex gap-2">
+          <input
+            className="flex-1 rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm font-mono placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="model:tag"
+            value={pullModel}
+            onChange={(e) => { setPullModel(e.target.value); setPullDone(false); setPullLog([]); setPullPercent(null); }}
+            disabled={pulling}
+          />
+          <button
+            onClick={startPull}
+            disabled={pulling || !pullModel.trim()}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+          >
+            {pulling ? "Pulling…" : "Pull"}
+          </button>
+        </div>
+
+        {/* Progress */}
+        {(pulling || pullDone || pullLog.length > 0) && (
+          <div className="mt-4 space-y-2">
+            {pullPercent != null && (
+              <div className="h-2 w-full overflow-hidden rounded-full bg-surface-raised">
+                <div
+                  className={`h-full rounded-full transition-all ${pullDone ? "bg-emerald-500" : "bg-indigo-500"}`}
+                  style={{ width: `${pullPercent}%` }}
+                />
+              </div>
+            )}
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-border bg-surface-raised p-3 font-mono text-xs text-fg-muted">
+              {pullLog.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+            </div>
+            {pullDone && (
+              <p className="text-sm text-emerald-400">
+                Model pulled successfully! Select it above to start using it.
+              </p>
+            )}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   gaps,
   knowledgeChunks,
   sources,
+  systemSettings,
   type Student,
   type Subject,
   type Topic,
@@ -633,4 +634,18 @@ export function deleteSubject(id: string): void {
   db.delete(sessions).where(eq(sessions.subjectId, id)).run();
   db.delete(topics).where(eq(topics.subjectId, id)).run();
   db.delete(subjects).where(eq(subjects.id, id)).run();
+}
+
+// ---------- System settings ----------
+
+export function getSystemSetting(key: string): string | null {
+  const row = db.select().from(systemSettings).where(eq(systemSettings.key, key)).get();
+  return row?.value ?? null;
+}
+
+export function setSystemSetting(key: string, value: string): void {
+  db.insert(systemSettings)
+    .values({ key, value })
+    .onConflictDoUpdate({ target: systemSettings.key, set: { value } })
+    .run();
 }

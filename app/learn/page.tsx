@@ -40,6 +40,7 @@ type StateData = {
   student: { id: string; name: string; color: string; isAdmin?: boolean; themePref?: string };
   subjects: Subject[];
   gaps: Gap[];
+  activeModel?: string;
 };
 type NextStep = { topicId: string; topicName: string; reason: string; note: string };
 type ChatMsg = {
@@ -385,6 +386,24 @@ export default function LearnPage() {
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <ThemeToggle onPersist={persistTheme} />
+          {data.activeModel && (
+            data.student.isAdmin ? (
+              <button
+                title="Change model — Admin Settings"
+                onClick={() => router.push("/admin?tab=settings")}
+                className="hidden max-w-[12rem] truncate rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-0.5 text-[11px] font-mono text-indigo-400 hover:bg-indigo-500/20 sm:block"
+              >
+                {data.activeModel}
+              </button>
+            ) : (
+              <span
+                title="Active model"
+                className="hidden max-w-[12rem] truncate rounded-full border border-slate-600/40 bg-slate-500/10 px-2.5 py-0.5 text-[11px] font-mono text-slate-400 sm:block"
+              >
+                {data.activeModel}
+              </span>
+            )
+          )}
           <span className="flex items-center gap-2 text-sm">
             <span
               className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white"
