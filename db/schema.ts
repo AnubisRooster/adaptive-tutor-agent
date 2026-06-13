@@ -13,6 +13,10 @@ export const students = sqliteTable("students", {
   tonePref: text("tone_pref").notNull().default("encouraging"),
   // "system" | "light" | "dark"
   themePref: text("theme_pref").notNull().default("system"),
+  // "local" | "openrouter"
+  llmProvider: text("llm_provider").notNull().default("local"),
+  openrouterApiKey: text("openrouter_api_key"),
+  openrouterModel: text("openrouter_model"),
   createdAt: integer("created_at").notNull(),
   lastActiveAt: integer("last_active_at").notNull(),
 });

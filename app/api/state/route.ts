@@ -8,7 +8,7 @@ import {
   getAllTopics,
   topicPrerequisites,
 } from "@/lib/data";
-import { activeTutorModel } from "@/lib/ollama";
+import { resolveLlmConfig } from "@/lib/llm";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +76,7 @@ export async function GET() {
     },
     subjects,
     gaps,
-    activeModel: activeTutorModel(),
+    activeModel: resolveLlmConfig(student).model,
+    activeProvider: resolveLlmConfig(student).provider,
   });
 }

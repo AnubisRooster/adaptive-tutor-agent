@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveStudent } from "@/lib/session";
 import { getTopic, getTopicSubtopics, setTopicSubtopics } from "@/lib/data";
 import { generateSubtopics } from "@/lib/subtopics-gen";
+import { resolveLlmConfig } from "@/lib/llm";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -28,8 +29,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ subtopics: cached, cached: true });
   }
 
+  const cfg = resolveLlmConfig(student);
   try {
-    const subtopics = await generateSubtopics(topicId);
+    const subtopics = await generateSubtopics(topicId, cfg);
     setTopicSubtopics(topicId, subtopics);
     return NextResponse.json({ subtopics, cached: false });
   } catch (err) {

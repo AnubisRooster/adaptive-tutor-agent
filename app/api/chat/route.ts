@@ -1,6 +1,7 @@
 import { getActiveStudent } from "@/lib/session";
 import { buildTutorTurn } from "@/lib/orchestrator";
-import { streamChat } from "@/lib/ollama";
+import { streamChat } from "@/lib/llm";
+import { resolveLlmConfig } from "@/lib/llm";
 import { getOrCreateSession, addMessage, markSubtopicTaught } from "@/lib/data";
 import type { TutorMode } from "@/lib/prompts";
 
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
   const history = Array.isArray(body.history) ? body.history : [];
   if (!subjectId || !topicId) return new Response("subjectId and topicId required.", { status: 400 });
 
+  const cfg = resolveLlmConfig(student);
   const session = getOrCreateSession(student.id, subjectId);
 
   // Persist the latest student message (if any) for resume + context.
@@ -58,13 +60,15 @@ export async function POST(req: Request) {
     async start(controller) {
       let full = "";
       try {
-        for await (const token of streamChat(built.messages, { temperature: 0.6 })) {
+        for await (const token of streamChat(cfg, built.messages, { temperature: 0.6 })) {
           full += token;
           controller.enqueue(encoder.encode(token));
         }
       } catch (err) {
         const msg =
-          "\n\n_(I couldn't reach the local model. Make sure Ollama is running on the host and the tutor model is pulled.)_";
+          cfg.provider === "openrouter"
+            ? "\n\n_(Couldn't reach OpenRouter. Check your API key and model selection in Model Settings.)_"
+            : "\n\n_(I couldn't reach the local model. Make sure Ollama is running on the host and the tutor model is pulled.)_";
         full += msg;
         controller.enqueue(encoder.encode(msg));
         console.error("[chat] stream error:", err);

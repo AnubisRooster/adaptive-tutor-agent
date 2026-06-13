@@ -83,6 +83,32 @@ export function updateStudentTheme(studentId: string, themePref: string): void {
   db.update(students).set({ themePref }).where(eq(students.id, studentId)).run();
 }
 
+export type StudentLlmConfig = {
+  llmProvider: "local" | "openrouter";
+  openrouterApiKey: string | null;
+  openrouterModel: string | null;
+};
+
+export function getStudentLlm(student: Student): StudentLlmConfig {
+  return {
+    llmProvider: (student.llmProvider ?? "local") as "local" | "openrouter",
+    openrouterApiKey: student.openrouterApiKey ?? null,
+    openrouterModel: student.openrouterModel ?? null,
+  };
+}
+
+export function updateStudentLlm(
+  studentId: string,
+  patch: Partial<StudentLlmConfig>
+): void {
+  const set: Record<string, unknown> = {};
+  if (patch.llmProvider !== undefined) set.llmProvider = patch.llmProvider;
+  if (patch.openrouterApiKey !== undefined) set.openrouterApiKey = patch.openrouterApiKey;
+  if (patch.openrouterModel !== undefined) set.openrouterModel = patch.openrouterModel;
+  if (Object.keys(set).length === 0) return;
+  db.update(students).set(set).where(eq(students.id, studentId)).run();
+}
+
 // ---------- Subjects & topics ----------
 
 export function listSubjects(): Subject[] {

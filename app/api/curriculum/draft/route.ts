@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getActiveStudent } from "@/lib/session";
-import { streamStructured } from "@/lib/ollama";
+import { streamStructured, resolveLlmConfig } from "@/lib/llm";
 import { curriculumMessages, curriculumFormat, parseCurriculumDraft } from "@/lib/curriculum-gen";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +27,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Please provide a subject name." }, { status: 400 });
   }
 
+  const cfg = resolveLlmConfig(student);
   const messages = curriculumMessages({ subjectName, sampleText: body.sampleText });
   const encoder = new TextEncoder();
 
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
       const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
       let buf = "";
       try {
-        for await (const token of streamStructured(messages, { temperature: 0.3, format: curriculumFormat })) {
+        for await (const token of streamStructured(cfg, messages, { temperature: 0.3, format: curriculumFormat })) {
           buf += token;
           // Approximate topic count from the number of "name" keys seen so far
           // (subject.name + each topic name); good enough for a progress hint.

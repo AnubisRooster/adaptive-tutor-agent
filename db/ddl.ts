@@ -136,4 +136,7 @@ export function applySchema(db: DatabaseType.Database): void {
   ensureColumn(db, "students", "theme_pref", "TEXT NOT NULL DEFAULT 'system'");
   ensureColumn(db, "mastery", "phase", "TEXT NOT NULL DEFAULT 'learn'");
   ensureColumn(db, "mastery", "progress", "TEXT NOT NULL DEFAULT '{}'");
+  ensureColumn(db, "students", "llm_provider", "TEXT NOT NULL DEFAULT 'local'");
+  ensureColumn(db, "students", "openrouter_api_key", "TEXT");
+  ensureColumn(db, "students", "openrouter_model", "TEXT");
 }

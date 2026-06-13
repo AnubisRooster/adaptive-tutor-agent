@@ -2,7 +2,7 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { getStudent, getSubject, getTopic, getMastery, listOpenGaps } from "@/lib/data";
 import { retrieveContext, contextBlock } from "@/lib/rag";
 import { bloomName } from "@/db/curriculum";
-import { chatOnce } from "@/lib/ollama";
+import { chatOnce, resolveLlmConfigById } from "@/lib/llm";
 import { QuizQuestionSchema, type QuizQuestion } from "@/lib/schemas";
 
 const quizFormat = zodToJsonSchema(QuizQuestionSchema) as object;
@@ -69,7 +69,9 @@ Calibrate difficulty to that mastery and Bloom level.${focusLine}${gapsLine}${re
 
 Write the question as JSON. Put the question text in "question", set "bloomLevel" to ${bloom}, and put a brief grading rubric in "idealAnswerOutline".`;
 
+  const cfg = resolveLlmConfigById(args.studentId);
   const raw = await chatOnce(
+    cfg,
     [
       { role: "system", content: system },
       { role: "user", content: user },

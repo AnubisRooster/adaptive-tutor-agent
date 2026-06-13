@@ -5,7 +5,7 @@ import { getSubject, getTopic, getMastery, getOrCreateSession, addMessage } from
 import { retrieveContext, contextBlock } from "@/lib/rag";
 import { buildGradeMessages } from "@/lib/prompts";
 import { GradeSchema, type Grade } from "@/lib/schemas";
-import { chatOnce } from "@/lib/ollama";
+import { chatOnce, resolveLlmConfig } from "@/lib/llm";
 import { applyGrade } from "@/lib/adaptive";
 
 export const dynamic = "force-dynamic";
@@ -58,9 +58,10 @@ export async function POST(req: Request) {
     contextText: contextBlock(retrieved),
   });
 
+  const cfg = resolveLlmConfig(student);
   let grade: Grade = FALLBACK;
   try {
-    const raw = await chatOnce(messages, { temperature: 0, format: zodToJsonSchema(GradeSchema) as object });
+    const raw = await chatOnce(cfg, messages, { temperature: 0, format: zodToJsonSchema(GradeSchema) as object });
     const parsed = GradeSchema.safeParse(JSON.parse(raw));
     if (parsed.success) grade = parsed.data;
   } catch (err) {

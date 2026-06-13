@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveStudent } from "@/lib/session";
 import { createSubject, createTopics, uniqueSubjectId, slugify, getSubject } from "@/lib/data";
 import { ensureSubtopicsCached } from "@/lib/subtopics-gen";
+import { resolveLlmConfig } from "@/lib/llm";
 
 export const dynamic = "force-dynamic";
 
@@ -72,12 +73,13 @@ export async function POST(req: Request) {
     }))
   );
 
+  const cfg = resolveLlmConfig(student);
   // Pre-generate sub-areas for each new topic in the background so the subject
   // arrives with drill-down options (no first-open wait). Sequential to avoid
   // overloading the local model; errors are swallowed per topic.
   void (async () => {
     for (const id of topicIds) {
-      await ensureSubtopicsCached(id);
+      await ensureSubtopicsCached(id, cfg);
     }
   })();
 

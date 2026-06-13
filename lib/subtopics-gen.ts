@@ -1,5 +1,5 @@
 import { zodToJsonSchema } from "zod-to-json-schema";
-import { chatOnce } from "@/lib/ollama";
+import { chatOnce, localFallbackConfig, type LlmConfig } from "@/lib/llm";
 import { getSubject, getTopic, getTopicSubtopics, setTopicSubtopics, type Subtopic } from "@/lib/data";
 import { retrieveContext, contextBlock } from "@/lib/rag";
 import { SubtopicsSchema } from "@/lib/schemas";
@@ -74,8 +74,10 @@ matching the schema.`;
 /**
  * Generate the list of sub-areas for a topic, grounded in any ingested material
  * for that subject/topic. Does not persist; the caller decides whether to cache.
+ * Pass a cfg to use the student's preferred provider; defaults to local Ollama.
  */
-export async function generateSubtopics(topicId: string): Promise<Subtopic[]> {
+export async function generateSubtopics(topicId: string, cfg?: LlmConfig): Promise<Subtopic[]> {
+  const resolvedCfg = cfg ?? localFallbackConfig();
   const topic = getTopic(topicId);
   if (!topic) throw new Error("Unknown topic.");
   const subject = getSubject(topic.subjectId);
@@ -96,6 +98,7 @@ List the sub-areas a student could drill into, as JSON.`;
   let lastRaw = "";
   for (let attempt = 0; attempt < 2 && (!parsed || !parsed.success); attempt++) {
     lastRaw = await chatOnce(
+      resolvedCfg,
       [
         { role: "system", content: SYSTEM },
         { role: "user", content: user },
@@ -132,12 +135,12 @@ List the sub-areas a student could drill into, as JSON.`;
  * pass); errors are swallowed so a single failure doesn't abort the caller.
  * Returns true if it generated (or already had) subtopics.
  */
-export async function ensureSubtopicsCached(topicId: string): Promise<boolean> {
+export async function ensureSubtopicsCached(topicId: string, cfg?: LlmConfig): Promise<boolean> {
   const topic = getTopic(topicId);
   if (!topic) return false;
   if (getTopicSubtopics(topic).length > 0) return true;
   try {
-    const subs = await generateSubtopics(topicId);
+    const subs = await generateSubtopics(topicId, cfg);
     setTopicSubtopics(topicId, subs);
     return true;
   } catch {

@@ -6,6 +6,7 @@ import HealthBadge from "@/components/HealthBadge";
 import MarkdownLite from "@/components/MarkdownLite";
 import ThemeToggle from "@/components/ThemeToggle";
 import { AddSubjectModal, AddMaterialModal } from "@/components/ContentModals";
+import ModelPicker from "@/components/ModelPicker";
 
 const BLOOM = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"];
 
@@ -41,6 +42,7 @@ type StateData = {
   subjects: Subject[];
   gaps: Gap[];
   activeModel?: string;
+  activeProvider?: "local" | "openrouter";
 };
 type NextStep = { topicId: string; topicName: string; reason: string; note: string };
 type ChatMsg = {
@@ -60,6 +62,7 @@ export default function LearnPage() {
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [showAddMaterial, setShowAddMaterial] = useState(false);
+  const [showModelPicker, setShowModelPicker] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [subtopics, setSubtopics] = useState<Record<string, SubtopicState>>({});
@@ -387,22 +390,17 @@ export default function LearnPage() {
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <ThemeToggle onPersist={persistTheme} />
           {data.activeModel && (
-            data.student.isAdmin ? (
-              <button
-                title="Change model — Admin Settings"
-                onClick={() => router.push("/admin?tab=settings")}
-                className="hidden max-w-[12rem] truncate rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-0.5 text-[11px] font-mono text-indigo-400 hover:bg-indigo-500/20 sm:block"
-              >
-                {data.activeModel}
-              </button>
-            ) : (
-              <span
-                title="Active model"
-                className="hidden max-w-[12rem] truncate rounded-full border border-slate-600/40 bg-slate-500/10 px-2.5 py-0.5 text-[11px] font-mono text-slate-400 sm:block"
-              >
-                {data.activeModel}
-              </span>
-            )
+            <button
+              title={data.activeProvider === "openrouter" ? "OpenRouter model — click to change" : "Local Ollama model — click to change"}
+              onClick={() => setShowModelPicker(true)}
+              className={`hidden max-w-[14rem] truncate rounded-full border px-2.5 py-0.5 text-[11px] font-mono sm:block ${
+                data.activeProvider === "openrouter"
+                  ? "border-violet-500/40 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20"
+                  : "border-indigo-500/40 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20"
+              }`}
+            >
+              {data.activeProvider === "openrouter" ? "☁ " : ""}{data.activeModel}
+            </button>
           )}
           <span className="flex items-center gap-2 text-sm">
             <span
@@ -778,6 +776,11 @@ export default function LearnPage() {
           subjectName={subject.name}
           topics={subject.topics.map((t) => ({ id: t.id, name: t.name }))}
           onClose={() => setShowAddMaterial(false)}
+        />
+      )}
+      {showModelPicker && (
+        <ModelPicker
+          onClose={() => { setShowModelPicker(false); loadState(); }}
         />
       )}
     </div>
