@@ -96,6 +96,16 @@ CREATE TABLE IF NOT EXISTS system_settings (
   value TEXT NOT NULL
 );
 
+-- Per-student gamification achievements (one row per earned badge).
+CREATE TABLE IF NOT EXISTS achievements (
+  id         TEXT PRIMARY KEY,
+  student_id TEXT NOT NULL,
+  code       TEXT NOT NULL,
+  earned_at  INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS achievements_student_code ON achievements(student_id, code);
+CREATE INDEX IF NOT EXISTS achievements_by_student ON achievements(student_id);
+
 -- Tracks each ingested document (e.g. an uploaded PDF) so the UI can show
 -- progress/status and chunks can be managed per source.
 CREATE TABLE IF NOT EXISTS sources (
@@ -139,4 +149,8 @@ export function applySchema(db: DatabaseType.Database): void {
   ensureColumn(db, "students", "llm_provider", "TEXT NOT NULL DEFAULT 'local'");
   ensureColumn(db, "students", "openrouter_api_key", "TEXT");
   ensureColumn(db, "students", "openrouter_model", "TEXT");
+  ensureColumn(db, "students", "xp", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "students", "streak_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "students", "streak_last_day", "TEXT");
+  ensureColumn(db, "students", "share_stats", "INTEGER NOT NULL DEFAULT 0");
 }

@@ -12,6 +12,7 @@ import {
   knowledgeChunks,
   sources,
   systemSettings,
+  achievements,
   type Student,
   type Subject,
   type Topic,
@@ -20,6 +21,7 @@ import {
   type KnowledgeChunk,
   type Message,
   type Source,
+  type Achievement,
 } from "@/db/schema";
 
 const now = () => Date.now();
@@ -674,4 +676,91 @@ export function setSystemSetting(key: string, value: string): void {
     .values({ key, value })
     .onConflictDoUpdate({ target: systemSettings.key, set: { value } })
     .run();
+}
+
+// ---------- Gamification ----------
+
+export function addXp(studentId: string, amount: number): number {
+  const student = getStudent(studentId);
+  const current = student?.xp ?? 0;
+  const newXp = current + amount;
+  db.update(students).set({ xp: newXp }).where(eq(students.id, studentId)).run();
+  return newXp;
+}
+
+export function setStreak(studentId: string, streakCount: number, streakLastDay: string): void {
+  db.update(students).set({ streakCount, streakLastDay }).where(eq(students.id, studentId)).run();
+}
+
+export function setShareStats(studentId: string, shareStats: boolean): void {
+  db.update(students).set({ shareStats }).where(eq(students.id, studentId)).run();
+}
+
+/** Grant a badge if not already earned. Returns true when newly granted. */
+export function grantAchievement(studentId: string, code: string): boolean {
+  try {
+    db.insert(achievements)
+      .values({ id: uuid(), studentId, code, earnedAt: now() })
+      .run();
+    return true;
+  } catch {
+    // Unique index violation: already earned
+    return false;
+  }
+}
+
+export function listAchievements(studentId: string): Achievement[] {
+  return db
+    .select()
+    .from(achievements)
+    .where(eq(achievements.studentId, studentId))
+    .orderBy(asc(achievements.earnedAt))
+    .all();
+}
+
+/** Count how many distinct gaps this student has ever had cleared. */
+export function countClearedGaps(studentId: string): number {
+  const row = db
+    .select({ n: sql<number>`count(*)` })
+    .from(gaps)
+    .where(and(eq(gaps.studentId, studentId), eq(gaps.status, "cleared")))
+    .get();
+  return row?.n ?? 0;
+}
+
+/** Count how many topics this student has mastered (mastery >= 0.8) across all subjects. */
+export function countMasteredTopics(studentId: string): number {
+  const row = db
+    .select({ n: sql<number>`count(*)` })
+    .from(mastery)
+    .where(and(eq(mastery.studentId, studentId), sql`${mastery.mastery} >= 0.8`))
+    .get();
+  return row?.n ?? 0;
+}
+
+/** Return the distinct set of subject ids this student has any mastery in. */
+export function listTouchedSubjectIds(studentId: string): string[] {
+  const rows = db
+    .select({ topicId: mastery.topicId })
+    .from(mastery)
+    .where(eq(mastery.studentId, studentId))
+    .all();
+  if (rows.length === 0) return [];
+  const topicIds = rows.map((r) => r.topicId);
+  const topicRows = db
+    .select({ subjectId: topics.subjectId })
+    .from(topics)
+    .where(inArray(topics.id, topicIds))
+    .all();
+  return [...new Set(topicRows.map((r) => r.subjectId))];
+}
+
+/** List opted-in students sorted by xp desc, then streak_count desc. */
+export function listLeaderboard(): Student[] {
+  return db
+    .select()
+    .from(students)
+    .where(eq(students.shareStats, true))
+    .orderBy(desc(students.xp), desc(students.streakCount))
+    .all();
 }

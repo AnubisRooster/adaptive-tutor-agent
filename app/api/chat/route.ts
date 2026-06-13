@@ -1,8 +1,8 @@
 import { getActiveStudent } from "@/lib/session";
 import { buildTutorTurn } from "@/lib/orchestrator";
-import { streamChat } from "@/lib/llm";
-import { resolveLlmConfig } from "@/lib/llm";
+import { streamChat, resolveLlmConfig } from "@/lib/llm";
 import { getOrCreateSession, addMessage, markSubtopicTaught } from "@/lib/data";
+import { awardForTeach } from "@/lib/gamify";
 import type { TutorMode } from "@/lib/prompts";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +53,7 @@ export async function POST(req: Request) {
   // (before the response finishes) so the progress bar advances right away.
   if (mode === "teach" && focus?.name) {
     markSubtopicTaught(student.id, topicId, focus.name);
+    awardForTeach(student.id);
   }
 
   const encoder = new TextEncoder();

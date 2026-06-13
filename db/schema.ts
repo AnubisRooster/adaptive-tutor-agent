@@ -17,6 +17,11 @@ export const students = sqliteTable("students", {
   llmProvider: text("llm_provider").notNull().default("local"),
   openrouterApiKey: text("openrouter_api_key"),
   openrouterModel: text("openrouter_model"),
+  // Gamification
+  xp: integer("xp").notNull().default(0),
+  streakCount: integer("streak_count").notNull().default(0),
+  streakLastDay: text("streak_last_day"), // YYYY-MM-DD
+  shareStats: integer("share_stats", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at").notNull(),
   lastActiveAt: integer("last_active_at").notNull(),
 });
@@ -164,6 +169,21 @@ export const systemSettings = sqliteTable("system_settings", {
   value: text("value").notNull(),
 });
 
+// One row per earned badge/achievement per student.
+export const achievements = sqliteTable(
+  "achievements",
+  {
+    id: text("id").primaryKey(),
+    studentId: text("student_id").notNull(),
+    code: text("code").notNull(), // e.g. "first_mastery"
+    earnedAt: integer("earned_at").notNull(),
+  },
+  (t) => ({
+    uniq: uniqueIndex("achievements_student_code").on(t.studentId, t.code),
+    byStudent: index("achievements_by_student").on(t.studentId),
+  })
+);
+
 export type Student = typeof students.$inferSelect;
 export type Subject = typeof subjects.$inferSelect;
 export type Topic = typeof topics.$inferSelect;
@@ -173,3 +193,4 @@ export type Message = typeof messages.$inferSelect;
 export type Gap = typeof gaps.$inferSelect;
 export type KnowledgeChunk = typeof knowledgeChunks.$inferSelect;
 export type Source = typeof sources.$inferSelect;
+export type Achievement = typeof achievements.$inferSelect;

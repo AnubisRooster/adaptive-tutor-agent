@@ -7,6 +7,7 @@ import { buildGradeMessages } from "@/lib/prompts";
 import { GradeSchema, type Grade } from "@/lib/schemas";
 import { chatOnce, resolveLlmConfig } from "@/lib/llm";
 import { applyGrade } from "@/lib/adaptive";
+import { awardForGrade } from "@/lib/gamify";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,14 @@ export async function POST(req: Request) {
 
   const result = applyGrade(student.id, topicId, grade, focusSubtopic);
 
+  // Gap cleared when mastery crossed the mastered threshold this answer.
+  const gapCleared = result.mastery.mastery >= 0.8 && (result.mastery.attempts ?? 0) > 0;
+  const gamify = awardForGrade(student.id, {
+    grade,
+    bloomLevel: result.mastery.bloomLevel,
+    gapCleared,
+  });
+
   // Persist the answer and the tutor's feedback for resume.
   const session = getOrCreateSession(student.id, subjectId);
   addMessage({ sessionId: session.id, studentId: student.id, role: "user", content: answer, topicId });
@@ -88,5 +97,14 @@ export async function POST(req: Request) {
     phase: result.mastery.phase,
     leveledUp: result.leveledUp,
     next: result.next,
+    gamify: {
+      xpGained: gamify.xpGained,
+      totalXp: gamify.totalXp,
+      level: gamify.newLevel.level,
+      title: gamify.newLevel.title,
+      leveledUpLevel: gamify.leveledUpLevel,
+      newBadges: gamify.newBadges,
+      streak: gamify.streak,
+    },
   });
 }

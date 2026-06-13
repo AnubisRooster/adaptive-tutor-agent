@@ -7,6 +7,8 @@ import MarkdownLite from "@/components/MarkdownLite";
 import ThemeToggle from "@/components/ThemeToggle";
 import { AddSubjectModal, AddMaterialModal } from "@/components/ContentModals";
 import ModelPicker from "@/components/ModelPicker";
+import AchievementsModal from "@/components/AchievementsModal";
+import { findNextSubtopic } from "@/lib/subtopic-nav";
 
 const BLOOM = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"];
 
@@ -37,18 +39,42 @@ type Subject = {
   topics: Topic[];
 };
 type Gap = { id: string; topicId: string; topicName: string; misconception: string };
+type GamifyBadge = { code: string; title: string; description: string; emoji: string; earnedAt: number };
+type GamifySummary = {
+  xp: number;
+  level: number;
+  title: string;
+  levelFloorXp: number;
+  nextLevelXp: number;
+  streak: number;
+  shareStats: boolean;
+  badges: GamifyBadge[];
+};
+type GamifyPayload = {
+  xpGained: number;
+  totalXp: number;
+  level: number;
+  title: string;
+  leveledUpLevel: boolean;
+  newBadges: { code: string; title: string; description: string; emoji: string }[];
+  streak: number;
+};
 type StateData = {
   student: { id: string; name: string; color: string; isAdmin?: boolean; themePref?: string };
   subjects: Subject[];
   gaps: Gap[];
   activeModel?: string;
   activeProvider?: "local" | "openrouter";
+  gamify?: GamifySummary;
 };
 type NextStep = { topicId: string; topicName: string; reason: string; note: string };
+type CoachPrompt =
+  | { kind: "quiz"; topicId: string; name: string; description: string }
+  | { kind: "advance"; topicId: string; name: string; description: string };
 type ChatMsg = {
   role: "user" | "assistant";
   content: string;
-  badge?: { score: number; mastery: number; leveledUp: boolean; next: NextStep };
+  badge?: { score: number; mastery: number; leveledUp: boolean; next: NextStep; gamify?: GamifyPayload };
 };
 
 export default function LearnPage() {
@@ -63,10 +89,12 @@ export default function LearnPage() {
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [showAddMaterial, setShowAddMaterial] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [subtopics, setSubtopics] = useState<Record<string, SubtopicState>>({});
   const [focus, setFocus] = useState<Focus | null>(null);
+  const [coachPrompt, setCoachPrompt] = useState<CoachPrompt | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const subject = useMemo(() => data?.subjects.find((s) => s.id === subjectId), [data, subjectId]);
@@ -140,6 +168,7 @@ export default function LearnPage() {
     setSubjectId(sid);
     setPendingQuestion(null);
     setFocus(null);
+    setCoachPrompt(null);
     const s = data?.subjects.find((x) => x.id === sid);
     setTopicId(s?.recommendedTopicId ?? s?.topics[0]?.id ?? "");
     await loadMessages(sid);
@@ -192,6 +221,7 @@ export default function LearnPage() {
   function selectSubtopic(tid: string, st: Subtopic) {
     setTopicId(tid);
     setPendingQuestion(null);
+    setCoachPrompt(null);
     setFocus({ topicId: tid, name: st.name, description: st.description });
     setNavOpen(false);
     streamTutor("teach", `Please teach me about "${st.name}" within this topic.`, { topicId: tid, name: st.name, description: st.description });
@@ -248,6 +278,10 @@ export default function LearnPage() {
       updateLastAssistant("I couldn't reach the local model. Is Ollama running on the host?");
     } finally {
       setBusy(false);
+      // After a focused teaching turn completes, offer a comprehension check.
+      if (mode === "teach" && activeFocus && !pendingQuestion) {
+        setCoachPrompt({ kind: "quiz", topicId: tid, name: activeFocus.name, description: activeFocus.description });
+      }
     }
   }
 
@@ -324,12 +358,28 @@ export default function LearnPage() {
         {
           role: "assistant",
           content: d.grade.feedbackForStudent,
-          badge: { score: d.grade.score, mastery: d.mastery, leveledUp: d.leveledUp, next: d.next },
+          badge: { score: d.grade.score, mastery: d.mastery, leveledUp: d.leveledUp, next: d.next, gamify: d.gamify },
         },
       ]);
       setPendingQuestion(null);
       const refreshed = await loadState();
-      if (refreshed && d.next?.topicId && d.next.topicId !== topicId) {
+
+      // After grading a focused subtopic, suggest advancing to the next one.
+      if (activeFocus && refreshed) {
+        const refreshedTopic = refreshed.subjects
+          .flatMap((s) => s.topics)
+          .find((t) => t.id === topicId);
+        const currentSubtopics = subtopics[topicId];
+        if (currentSubtopics?.status === "ready" && refreshedTopic) {
+          const next = findNextSubtopic(currentSubtopics.items, refreshedTopic.progress ?? {});
+          if (next && next.name !== activeFocus.name) {
+            setCoachPrompt({ kind: "advance", topicId, name: next.name, description: next.description });
+          }
+        }
+      }
+
+      // Fall back to existing next-topic jump when grader recommends a different topic.
+      if (!activeFocus && refreshed && d.next?.topicId && d.next.topicId !== topicId) {
         const exists = refreshed.subjects.some((s) => s.topics.some((t) => t.id === d.next.topicId));
         if (exists) setTopicId(d.next.topicId);
       }
@@ -402,13 +452,29 @@ export default function LearnPage() {
               {data.activeProvider === "openrouter" ? "☁ " : ""}{data.activeModel}
             </button>
           )}
+          {/* XP/Level chip */}
+          {data.gamify && (
+            <button
+              onClick={() => setShowAchievements(true)}
+              title="View achievements & progress"
+              className="hidden items-center gap-1.5 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-0.5 text-xs font-medium text-indigo-400 hover:bg-indigo-500/20 sm:flex"
+            >
+              <span>Lv.{data.gamify.level}</span>
+              <span className="text-indigo-300">{data.gamify.xp.toLocaleString()} XP</span>
+              {data.gamify.streak > 0 && (
+                <span className="ml-0.5 text-orange-400">🔥{data.gamify.streak}</span>
+              )}
+            </button>
+          )}
           <span className="flex items-center gap-2 text-sm">
-            <span
-              className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white"
+            <button
+              onClick={() => setShowAchievements(true)}
+              title="View achievements & progress"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white hover:ring-2 hover:ring-indigo-400 hover:ring-offset-1 hover:ring-offset-surface"
               style={{ backgroundColor: data.student.color }}
             >
               {data.student.name.charAt(0).toUpperCase()}
-            </span>
+            </button>
             <span className="hidden max-w-[8rem] truncate sm:inline">{data.student.name}</span>
           </span>
           {data.student.isAdmin && (
@@ -523,7 +589,7 @@ export default function LearnPage() {
                     >
                       <div className="flex items-stretch">
                         <button
-                          onClick={() => { setTopicId(t.id); setPendingQuestion(null); setFocus(null); setNavOpen(false); }}
+                          onClick={() => { setTopicId(t.id); setPendingQuestion(null); setFocus(null); setCoachPrompt(null); setNavOpen(false); }}
                           className="flex-1 rounded-l-lg p-2.5 text-left hover:bg-surface-raised/40"
                         >
                           <div className="flex items-center justify-between">
@@ -656,7 +722,7 @@ export default function LearnPage() {
                     <span className="text-accent/80">Focus:</span>
                     <span className="font-medium">{focus.name}</span>
                     <button
-                      onClick={() => setFocus(null)}
+                      onClick={() => { setFocus(null); setCoachPrompt(null); }}
                       className="ml-0.5 text-accent/70 hover:text-fg"
                       title="Clear focus — teach the whole topic"
                       aria-label="Clear focus"
@@ -719,6 +785,14 @@ export default function LearnPage() {
                   <Bubble key={i} msg={m} color={data.student.color} />
                 ))}
                 {busy && <div className="text-xs text-fg-subtle">tutor is thinking…</div>}
+                {coachPrompt && !pendingQuestion && !busy && (
+                  <CoachBanner
+                    prompt={coachPrompt}
+                    onQuiz={() => { setCoachPrompt(null); askQuiz("quiz"); }}
+                    onAdvance={(st) => { setCoachPrompt(null); selectSubtopic(coachPrompt.topicId, st); }}
+                    onDismiss={() => setCoachPrompt(null)}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -783,6 +857,12 @@ export default function LearnPage() {
           onClose={() => { setShowModelPicker(false); loadState(); }}
         />
       )}
+      {showAchievements && data.gamify && (
+        <AchievementsModal
+          initialData={data.gamify}
+          onClose={() => { setShowAchievements(false); loadState(); }}
+        />
+      )}
     </div>
   );
 }
@@ -825,6 +905,63 @@ function ActionBtn({ children, onClick, disabled }: { children: React.ReactNode;
   );
 }
 
+function CoachBanner({
+  prompt,
+  onQuiz,
+  onAdvance,
+  onDismiss,
+}: {
+  prompt: CoachPrompt;
+  onQuiz: () => void;
+  onAdvance: (st: { name: string; description: string }) => void;
+  onDismiss: () => void;
+}) {
+  if (prompt.kind === "quiz") {
+    return (
+      <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/5 px-4 py-3 text-sm">
+        <p className="mb-2.5 font-medium text-fg">
+          Ready to check your understanding of <span className="text-indigo-400">{prompt.name}</span>?
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={onQuiz}
+            className="rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-400"
+          >
+            Quiz me
+          </button>
+          <button
+            onClick={onDismiss}
+            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-fg-muted hover:bg-surface-raised"
+          >
+            Keep learning
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm">
+      <p className="mb-2.5 font-medium text-fg">
+        Nice work! Continue to <span className="text-emerald-400">{prompt.name}</span>?
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => onAdvance({ name: prompt.name, description: prompt.description })}
+          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500"
+        >
+          Continue
+        </button>
+        <button
+          onClick={onDismiss}
+          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-fg-muted hover:bg-surface-raised"
+        >
+          Stay here
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Bubble({ msg, color }: { msg: ChatMsg; color: string }) {
   const isUser = msg.role === "user";
   return (
@@ -837,12 +974,42 @@ function Bubble({ msg, color }: { msg: ChatMsg; color: string }) {
       >
         <MarkdownLite content={msg.content || "…"} />
         {msg.badge && (
-          <div className="mt-3 border-t border-border/60 pt-2 text-xs text-fg-muted">
-            <span className="font-semibold">Score: {(msg.badge.score * 100).toFixed(0)}%</span>
-            <span className="mx-2 text-fg-subtle">·</span>
-            <span>Mastery now {(msg.badge.mastery * 100).toFixed(0)}%</span>
-            {msg.badge.leveledUp && <span className="ml-2 text-emerald-500">⬆ Leveled up!</span>}
-            {msg.badge.next?.note && <div className="mt-1 text-fg-subtle">{msg.badge.next.note}</div>}
+          <div className="mt-3 border-t border-border/60 pt-2 text-xs text-fg-muted space-y-1">
+            <div className="flex flex-wrap items-center gap-x-2">
+              <span className="font-semibold">Score: {(msg.badge.score * 100).toFixed(0)}%</span>
+              <span className="text-fg-subtle">·</span>
+              <span>Mastery {(msg.badge.mastery * 100).toFixed(0)}%</span>
+              {msg.badge.leveledUp && <span className="text-emerald-500">⬆ Bloom leveled up!</span>}
+            </div>
+            {msg.badge.gamify && (
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className="text-indigo-400 font-semibold">+{msg.badge.gamify.xpGained} XP</span>
+                <span className="text-fg-subtle">·</span>
+                <span>Lv.{msg.badge.gamify.level} {msg.badge.gamify.title}</span>
+                {msg.badge.gamify.leveledUpLevel && (
+                  <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-indigo-400 font-semibold">
+                    🎉 Level Up!
+                  </span>
+                )}
+                {msg.badge.gamify.streak > 0 && (
+                  <span className="text-orange-400">🔥 {msg.badge.gamify.streak}-day streak</span>
+                )}
+                {msg.badge.gamify.newBadges.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {msg.badge.gamify.newBadges.map((b) => (
+                      <span
+                        key={b.code}
+                        title={b.description}
+                        className="flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-amber-400"
+                      >
+                        {b.emoji} <span className="font-medium">{b.title}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {msg.badge.next?.note && <div className="text-fg-subtle">{msg.badge.next.note}</div>}
           </div>
         )}
       </div>
