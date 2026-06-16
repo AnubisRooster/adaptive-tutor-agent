@@ -747,7 +747,7 @@ export default function LearnPage() {
                 {pendingQuestion ? "Submit answer" : "Send"}
               </button>
             </div>
-            {/[\\\\][([]|[\\\\]ce\\{|[\\\\]pu\\{|\\$/.test(input) && (
+            {/[\\][([]|[\\]ce\{|[\\]pu\{|\$/.test(input) && (
               <div className="mx-auto mt-2 max-w-3xl rounded-lg border border-border bg-surface-muted/40 px-3 py-2">
                 <div className="mb-1 text-[10px] uppercase tracking-wider text-fg-subtle">Preview</div>
                 <MarkdownLite content={input} />
