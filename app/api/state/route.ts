@@ -9,7 +9,6 @@ import {
   topicPrerequisites,
 } from "@/lib/data";
 import { resolveLlmConfig } from "@/lib/llm";
-import { gamifySummary } from "@/lib/gamify";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +78,5 @@ export async function GET() {
     gaps,
     activeModel: resolveLlmConfig(student).model,
     activeProvider: resolveLlmConfig(student).provider,
-    gamify: gamifySummary(student.id),
   });
 }
