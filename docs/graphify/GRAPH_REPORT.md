@@ -1,45 +1,45 @@
-# Graph Report - adaptive-tutor-agent  (2026-09-07)
+# Graph Report - adaptive-tutor-agent  (2026-09-14)
 
 ## Corpus Check
 - 131 files · ~193,474 words
 - Verdict: corpus is large enough that graph structure adds value.
+- Unclassified: 5 file(s) not represented in the graph (top: .example 1, (none) 1, .css 1)
 
 ## Summary
-- 712 nodes · 1615 edges · 38 communities (31 shown, 4 thin omitted)
+- 712 nodes · 1621 edges · 37 communities (30 shown, 4 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
+- grade/route.ts
 - getActiveStudent()
-- getTopic()
-- crawl.ts
 - llm.ts
 - package.json
-- grade/route.ts
+- crawl.ts
 - admin/page.tsx
 - gamify.ts
 - data.ts
-- curriculum.ts
+- getTopic()
 - launch.mjs
+- schemas.ts
 - compilerOptions
 - react
-- requireAdmin()
-- learn/page.tsx
 - prompts.ts
+- requireAdmin()
+- getSubject()
+- learn/page.tsx
 - scripts
+- admin/sources/route.ts
 - LearnPage()
 - AddSubjectModal()
 - MarkdownLite.tsx
 - ModelPicker.tsx
 - ContentModals.tsx
-- admin/sources/route.ts
 - setup.mjs
 - select/route.ts
 - subtopic-nav.test.ts
 - chunks/route.ts
-- vitest
 - install-macos-app.mjs
-- subjects/[id]/route.ts
 - run-e2e.ts
 - next.config.mjs
 - graphify_pipeline.py
@@ -73,51 +73,51 @@
 ## Import Cycles
 - None detected.
 
-## Communities (38 total, 4 thin omitted)
+## Communities (37 total, 4 thin omitted)
 
-### Community 0 - "getActiveStudent()"
-Cohesion: 0.06
-Nodes (52): dynamic, maxDuration, POST(), DELETE(), dynamic, GET(), POST(), dynamic (+44 more)
-
-### Community 1 - "getTopic()"
-Cohesion: 0.09
-Nodes (47): DELETE(), dynamic, PATCH(), Body, dynamic, POST(), TopicInput, dynamic (+39 more)
-
-### Community 2 - "crawl.ts"
-Cohesion: 0.10
-Nodes (40): dynamic, maxDuration, POST(), dynamic, maxDuration, POST(), chunkText(), crawlSite() (+32 more)
-
-### Community 3 - "llm.ts"
+### Community 0 - "grade/route.ts"
 Cohesion: 0.08
-Nodes (40): dynamic, maxDuration, POST(), dynamic, GET(), embedModel(), numCtx(), numPredict() (+32 more)
+Nodes (57): Body, dynamic, POST(), Body, dynamic, FALLBACK, POST(), Body (+49 more)
 
-### Community 4 - "package.json"
+### Community 1 - "getActiveStudent()"
+Cohesion: 0.06
+Nodes (53): dynamic, maxDuration, POST(), DELETE(), dynamic, GET(), POST(), dynamic (+45 more)
+
+### Community 2 - "llm.ts"
+Cohesion: 0.08
+Nodes (41): dynamic, GET(), BLOOM_LEVELS, bloomName(), SeedSubject, SeedTopic, SUBJECTS, TOPICS (+33 more)
+
+### Community 3 - "package.json"
 Cohesion: 0.04
 Nodes (45): metadata, viewport, dependencies, better-sqlite3, drizzle-orm, katex, next, ollama (+37 more)
 
-### Community 5 - "grade/route.ts"
+### Community 4 - "crawl.ts"
 Cohesion: 0.11
-Nodes (40): Body, dynamic, POST(), Body, dynamic, FALLBACK, POST(), Body (+32 more)
+Nodes (36): dynamic, maxDuration, POST(), dynamic, maxDuration, POST(), chunkText(), crawlSite() (+28 more)
 
-### Community 6 - "admin/page.tsx"
+### Community 5 - "admin/page.tsx"
 Cohesion: 0.06
 Nodes (20): ChatBubble(), ChatHistory(), ChatMessage, ChatSession, Chunk, CurriculumSubject, CurriculumTab(), CurriculumTopic (+12 more)
 
-### Community 7 - "gamify.ts"
+### Community 6 - "gamify.ts"
 Cohesion: 0.11
 Nodes (24): dynamic, GET(), AchievementsModal(), Badge, GamifyData, LeaderEntry, Props, xpProgressPct() (+16 more)
 
-### Community 8 - "data.ts"
-Cohesion: 0.15
-Nodes (21): gaps, KnowledgeChunk, Message, messages, Session, sessions, Source, sources (+13 more)
+### Community 7 - "data.ts"
+Cohesion: 0.13
+Nodes (25): db, globalForDb, sqlite, gaps, KnowledgeChunk, knowledgeChunks, Message, messages (+17 more)
 
-### Community 9 - "curriculum.ts"
-Cohesion: 0.14
-Nodes (18): BLOOM_LEVELS, bloomName(), SeedSubject, SeedTopic, SUBJECTS, TOPICS, applySchema(), ensureColumn() (+10 more)
+### Community 8 - "getTopic()"
+Cohesion: 0.18
+Nodes (20): DELETE(), dynamic, PATCH(), dynamic, maxDuration, POST(), deleteTopic(), getTopic() (+12 more)
 
-### Community 10 - "launch.mjs"
-Cohesion: 0.23
+### Community 9 - "launch.mjs"
+Cohesion: 0.24
 Nodes (20): checkNodeVersion(), __dirname, ensureBuild(), ensureDb(), ensureDependencies(), ensureModel(), ensureNativeModules(), ensureOllama() (+12 more)
+
+### Community 10 - "schemas.ts"
+Cohesion: 0.15
+Nodes (18): dynamic, maxDuration, POST(), curriculumFormat, curriculumMessages(), generateCurriculumDraft(), parseCurriculumDraft(), streamStructured() (+10 more)
 
 ### Community 11 - "compilerOptions"
 Cohesion: 0.11
@@ -127,75 +127,71 @@ Nodes (18): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModu
 Cohesion: 0.14
 Nodes (12): COLORS, Profile, ProfilesPage(), Health, HealthBadge(), applyTheme(), LABELS, ORDER (+4 more)
 
-### Community 13 - "requireAdmin()"
+### Community 13 - "prompts.ts"
+Cohesion: 0.16
+Nodes (14): Gap, Mastery, Student, Subject, Topic, buildTutorSystemPrompt(), masteryBand(), SubtopicProgressEntry (+6 more)
+
+### Community 14 - "requireAdmin()"
 Cohesion: 0.18
 Nodes (13): dynamic, GET(), dynamic, GET(), dynamic, GET(), dynamic, GET() (+5 more)
 
-### Community 14 - "learn/page.tsx"
+### Community 15 - "getSubject()"
+Cohesion: 0.23
+Nodes (14): DELETE(), dynamic, PATCH(), Body, dynamic, POST(), TopicInput, createSubject() (+6 more)
+
+### Community 16 - "learn/page.tsx"
 Cohesion: 0.12
 Nodes (12): BLOOM, ChatMsg, Focus, Gap, NextStep, PHASE_LABELS, StateData, Subject (+4 more)
 
-### Community 15 - "prompts.ts"
-Cohesion: 0.17
-Nodes (13): Gap, Mastery, Student, Subject, Topic, buildTutorSystemPrompt(), masteryBand(), SubtopicProgressEntry (+5 more)
-
-### Community 16 - "scripts"
+### Community 17 - "scripts"
 Cohesion: 0.12
 Nodes (16): scripts, admin:grant, app:install, bootstrap, build, db:migrate, dev, launch (+8 more)
 
-### Community 17 - "LearnPage()"
+### Community 18 - "admin/sources/route.ts"
+Cohesion: 0.22
+Nodes (12): DELETE(), dynamic, GET(), maxDuration, POST(), dynamic, GET(), deleteSource() (+4 more)
+
+### Community 19 - "LearnPage()"
 Cohesion: 0.23
 Nodes (10): LearnPage(), askQuiz(), gradeAnswer(), historyForApi(), loadMessages(), onSelectSubject(), onSend(), selectSubtopic() (+2 more)
 
-### Community 18 - "AddSubjectModal()"
+### Community 20 - "AddSubjectModal()"
 Cohesion: 0.18
 Nodes (6): AddSubjectModal(), onChapterFile(), prettifyFileName(), removeChapter(), updateChapter(), ChapterBuilder()
 
-### Community 19 - "MarkdownLite.tsx"
+### Community 21 - "MarkdownLite.tsx"
 Cohesion: 0.26
 Nodes (10): MarkdownLite(), mathHtml(), MathToken, normalizeMath(), renderCodeAndMath(), renderInline(), renderMathTokens(), renderSegment() (+2 more)
 
-### Community 20 - "ModelPicker.tsx"
+### Community 22 - "ModelPicker.tsx"
 Cohesion: 0.18
 Nodes (7): Filter, fmt(), fmtCtx(), ModelPicker(), OpenRouterModel, ProfileLlm, Props
 
-### Community 21 - "ContentModals.tsx"
+### Community 23 - "ContentModals.tsx"
 Cohesion: 0.17
 Nodes (7): ACTIVE_STATUSES, AddMaterialModal(), Chapter, Draft, DraftTopic, Source, TopicLite
 
-### Community 22 - "admin/sources/route.ts"
-Cohesion: 0.31
-Nodes (9): DELETE(), dynamic, GET(), maxDuration, POST(), deleteSource(), getChunksForSource(), getSource() (+1 more)
-
-### Community 23 - "setup.mjs"
-Cohesion: 0.38
+### Community 24 - "setup.mjs"
+Cohesion: 0.40
 Nodes (9): __dirname, log(), main(), ok(), readEnvValue(), ROOT, run(), warn() (+1 more)
 
-### Community 24 - "select/route.ts"
+### Community 25 - "select/route.ts"
 Cohesion: 0.32
 Nodes (6): COOKIE_OPTS, dynamic, POST(), hashPin(), touchStudent(), verifyPin()
 
-### Community 25 - "subtopic-nav.test.ts"
+### Community 26 - "subtopic-nav.test.ts"
 Cohesion: 0.39
 Nodes (6): allQuizzed(), findNextSubtopic(), ProgressMap, SubtopicItem, SubtopicProgressEntry, items
 
-### Community 26 - "chunks/route.ts"
+### Community 27 - "chunks/route.ts"
 Cohesion: 0.43
 Nodes (6): DELETE(), dynamic, GET(), deleteChunk(), getChunk(), listChunks()
-
-### Community 27 - "vitest"
-Cohesion: 0.33
-Nodes (5): db, globalForDb, sqlite, knowledgeChunks, vitest
 
 ### Community 28 - "install-macos-app.mjs"
 Cohesion: 0.33
 Nodes (6): buildAppBundle(), buildIcnsFromPng(), desktop, __dirname, ROOT, targets
 
-### Community 29 - "subjects/[id]/route.ts"
-Cohesion: 0.47
-Nodes (5): DELETE(), dynamic, PATCH(), deleteSubject(), updateSubject()
-
-### Community 30 - "run-e2e.ts"
+### Community 29 - "run-e2e.ts"
 Cohesion: 0.83
 Nodes (3): check(), cookieFrom(), main()
 
@@ -211,13 +207,13 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.255) - this node is a cross-community bridge._
 - **Why does `drizzle-orm` connect `data.ts` to `package.json`?**
   _High betweenness centrality (0.134) - this node is a cross-community bridge._
-- **Why does `vitest` connect `vitest` to `getActiveStudent()`, `getTopic()`, `crawl.ts`, `llm.ts`, `package.json`, `grade/route.ts`, `gamify.ts`, `curriculum.ts`, `prompts.ts`, `MarkdownLite.tsx`, `subtopic-nav.test.ts`?**
+- **Why does `vitest` connect `prompts.ts` to `grade/route.ts`, `getActiveStudent()`, `llm.ts`, `package.json`, `crawl.ts`, `gamify.ts`, `data.ts`, `schemas.ts`, `getSubject()`, `MarkdownLite.tsx`, `subtopic-nav.test.ts`?**
   _High betweenness centrality (0.105) - this node is a cross-community bridge._
 - **What connects `Tab`, `ProfileSummary`, `ProfileDetail` to the rest of the system?**
   _224 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `grade/route.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.07945566286215978 - nodes in this community are weakly interconnected._
 - **Should `getActiveStudent()` be split into smaller, more focused modules?**
-  _Cohesion score 0.06009615384615385 - nodes in this community are weakly interconnected._
-- **Should `getTopic()` be split into smaller, more focused modules?**
-  _Cohesion score 0.08571428571428572 - nodes in this community are weakly interconnected._
-- **Should `crawl.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.09714285714285714 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06057692307692308 - nodes in this community are weakly interconnected._
+- **Should `llm.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.08345428156748912 - nodes in this community are weakly interconnected._
