@@ -1,12 +1,12 @@
-# Graph Report - adaptive-tutor-agent  (2026-09-28)
+# Graph Report - adaptive-tutor-agent  (2026-10-05)
 
 ## Corpus Check
-- 131 files · ~199,236 words
+- 131 files · ~200,142 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: .example 1, (none) 1, .css 1)
 
 ## Summary
-- 742 nodes · 1738 edges · 38 communities (34 shown, 4 thin omitted)
+- 742 nodes · 1738 edges · 38 communities (32 shown, 6 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
@@ -21,7 +21,6 @@
 - seed.ts
 - getTopic()
 - openrouter.ts
-- graphify_pipeline.py
 - compilerOptions
 - app/page.tsx
 - package.json
@@ -76,11 +75,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (38 total, 4 thin omitted)
+## Communities (38 total, 6 thin omitted)
 
 ### Community 0 - "data.ts"
 Cohesion: 0.05
-Nodes (67): DELETE(), dynamic, GET(), dynamic, GET(), dynamic, GET(), dynamic (+59 more)
+Nodes (66): DELETE(), dynamic, GET(), dynamic, GET(), dynamic, GET(), dynamic (+58 more)
 
 ### Community 1 - "grade/route.ts"
 Cohesion: 0.07
@@ -88,11 +87,11 @@ Nodes (63): Body, dynamic, POST(), Body, dynamic, FALLBACK, POST(), Body (+55 mo
 
 ### Community 2 - "launch.mjs"
 Cohesion: 0.09
-Nodes (40): ref_node_child_process, ref_node_fs, ref_node_module, ref_node_os, ref_node_url, buildAppBundle(), buildIcnsFromPng(), desktop (+32 more)
+Nodes (35): buildAppBundle(), buildIcnsFromPng(), desktop, __dirname, ROOT, targets, checkNodeVersion(), __dirname (+27 more)
 
 ### Community 3 - "gamify.ts"
 Cohesion: 0.07
-Nodes (36): COOKIE_OPTS, dynamic, POST(), AchievementsModal(), Badge, GamifyData, LeaderEntry, Props (+28 more)
+Nodes (29): COOKIE_OPTS, dynamic, POST(), AchievementsModal(), Badge, GamifyData, LeaderEntry, Props (+21 more)
 
 ### Community 4 - "text/route.ts"
 Cohesion: 0.12
@@ -108,7 +107,7 @@ Nodes (30): dynamic, maxDuration, POST(), dynamic, GET(), embedModel(), numCtx()
 
 ### Community 7 - "seed.ts"
 Cohesion: 0.12
-Nodes (23): BLOOM_LEVELS, bloomName(), SeedSubject, SeedTopic, SUBJECTS, TOPICS, applySchema(), ensureColumn() (+15 more)
+Nodes (22): BLOOM_LEVELS, bloomName(), SeedSubject, SeedTopic, SUBJECTS, TOPICS, applySchema(), ensureColumn() (+14 more)
 
 ### Community 8 - "getTopic()"
 Cohesion: 0.17
@@ -117,10 +116,6 @@ Nodes (22): DELETE(), dynamic, PATCH(), dynamic, maxDuration, POST(), loadEnv(),
 ### Community 9 - "openrouter.ts"
 Cohesion: 0.16
 Nodes (19): dynamic, POST(), CachePayload, dynamic, GET(), readCache(), writeCache(), getSystemSetting() (+11 more)
-
-### Community 10 - "graphify_pipeline.py"
-Cohesion: 0.11
-Nodes (15): graphify_analyze, graphify_build, graphify_cluster, graphify_detect, graphify_export, graphify_extract, graphify_llm, graphify_report (+7 more)
 
 ### Community 11 - "compilerOptions"
 Cohesion: 0.11
@@ -152,7 +147,7 @@ Nodes (13): Bubble(), MarkdownLite(), mathHtml(), MathToken, normalizeMath(), re
 
 ### Community 18 - "next"
 Cohesion: 0.14
-Nodes (10): dynamic, maxDuration, POST(), dynamic, GET(), app_globals, metadata, viewport (+2 more)
+Nodes (8): dynamic, maxDuration, POST(), dynamic, GET(), metadata, viewport, next
 
 ### Community 19 - "AddSubjectModal()"
 Cohesion: 0.19
@@ -198,10 +193,6 @@ Nodes (6): allQuizzed(), findNextSubtopic(), ProgressMap, SubtopicItem, Subtopic
 Cohesion: 0.67
 Nodes (3): dynamic, GET(), getRecentMessages()
 
-### Community 30 - "share/route.ts"
-Cohesion: 0.50
-Nodes (3): dynamic, POST(), lib_data_setsharestats
-
 ### Community 31 - "theme/route.ts"
 Cohesion: 0.67
 Nodes (3): dynamic, PATCH(), updateStudentTheme()
@@ -217,22 +208,22 @@ Nodes (3): check(), cookieFrom(), main()
 ## Knowledge Gaps
 - **223 isolated node(s):** `Tab`, `ProfileSummary`, `ProfileDetail`, `ChatMessage`, `ChatSession` (+218 more)
   These have ≤1 connection - possible missing edges. (Counts symbols only; 302 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `next` connect `next` to `data.ts`, `grade/route.ts`, `gamify.ts`, `text/route.ts`, `admin/page.tsx`, `llm.ts`, `getTopic()`, `openrouter.ts`, `app/page.tsx`, `package.json`, `getSubject()`, `learn/page.tsx`, `getActiveStudent()`, `session.ts`, `llm/route.ts`, `messages/route.ts`, `share/route.ts`, `theme/route.ts`, `api/sources/route.ts`?**
   _High betweenness centrality (0.294) - this node is a cross-community bridge._
-- **Why does `vitest` connect `data.ts` to `grade/route.ts`, `gamify.ts`, `text/route.ts`, `llm.ts`, `seed.ts`, `openrouter.ts`, `package.json`, `getSubject()`, `MarkdownLite.tsx`, `subtopic-nav.test.ts`?**
-  _High betweenness centrality (0.063) - this node is a cross-community bridge._
-- **Why does `react` connect `app/page.tsx` to `gamify.ts`, `admin/page.tsx`, `package.json`, `MarkdownLite.tsx`, `learn/page.tsx`, `ModelPicker()`, `ContentModals.tsx`?**
-  _High betweenness centrality (0.060) - this node is a cross-community bridge._
 - **What connects `Tab`, `ProfileSummary`, `ProfileDetail` to the rest of the system?**
   _223 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `data.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.05171907140758154 - nodes in this community are weakly interconnected._
+- **Why does `vitest` connect `data.ts` to `grade/route.ts`, `gamify.ts`, `text/route.ts`, `llm.ts`, `seed.ts`, `openrouter.ts`, `package.json`, `getSubject()`, `MarkdownLite.tsx`, `subtopic-nav.test.ts`?**
+  _High betweenness centrality (0.063) - this node is a cross-community bridge._
 - **Should `grade/route.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.06631578947368422 - nodes in this community are weakly interconnected._
+- **Why does `react` connect `app/page.tsx` to `gamify.ts`, `admin/page.tsx`, `package.json`, `MarkdownLite.tsx`, `learn/page.tsx`, `ModelPicker()`, `ContentModals.tsx`?**
+  _High betweenness centrality (0.060) - this node is a cross-community bridge._
 - **Should `launch.mjs` be split into smaller, more focused modules?**
   _Cohesion score 0.09131205673758866 - nodes in this community are weakly interconnected._
