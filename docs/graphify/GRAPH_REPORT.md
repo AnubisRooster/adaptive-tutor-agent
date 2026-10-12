@@ -1,7 +1,7 @@
-# Graph Report - adaptive-tutor-agent  (2026-10-05)
+# Graph Report - adaptive-tutor-agent  (2026-10-12)
 
 ## Corpus Check
-- 131 files · ~200,142 words
+- 131 files · ~200,153 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: .example 1, (none) 1, .css 1)
 
@@ -206,7 +206,7 @@ Cohesion: 0.83
 Nodes (3): check(), cookieFrom(), main()
 
 ## Knowledge Gaps
-- **223 isolated node(s):** `Tab`, `ProfileSummary`, `ProfileDetail`, `ChatMessage`, `ChatSession` (+218 more)
+- **9 isolated node(s):** `@types/better-sqlite3`, `@types/katex`, `@types/node`, `@types/react`, `@types/react-dom` (+4 more)
   These have ≤1 connection - possible missing edges. (Counts symbols only; 302 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -215,8 +215,8 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `next` connect `next` to `data.ts`, `grade/route.ts`, `gamify.ts`, `text/route.ts`, `admin/page.tsx`, `llm.ts`, `getTopic()`, `openrouter.ts`, `app/page.tsx`, `package.json`, `getSubject()`, `learn/page.tsx`, `getActiveStudent()`, `session.ts`, `llm/route.ts`, `messages/route.ts`, `share/route.ts`, `theme/route.ts`, `api/sources/route.ts`?**
   _High betweenness centrality (0.294) - this node is a cross-community bridge._
-- **What connects `Tab`, `ProfileSummary`, `ProfileDetail` to the rest of the system?**
-  _223 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `@types/better-sqlite3`, `@types/katex`, `@types/node` to the rest of the system?**
+  _9 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `data.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.05171907140758154 - nodes in this community are weakly interconnected._
 - **Why does `vitest` connect `data.ts` to `grade/route.ts`, `gamify.ts`, `text/route.ts`, `llm.ts`, `seed.ts`, `openrouter.ts`, `package.json`, `getSubject()`, `MarkdownLite.tsx`, `subtopic-nav.test.ts`?**
