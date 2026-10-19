@@ -1,7 +1,7 @@
-# Graph Report - adaptive-tutor-agent  (2026-10-12)
+# Graph Report - adaptive-tutor-agent  (2026-10-19)
 
 ## Corpus Check
-- 131 files · ~200,153 words
+- 131 files · ~147,126 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: .example 1, (none) 1, .css 1)
 
